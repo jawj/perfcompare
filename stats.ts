@@ -20,7 +20,7 @@ export function mannWhitneyU(data: [number[], number[]]) {
   // handy for comparison: R or https://www.statskingdom.com/170median_mann_whitney.html
   const data0 = data[0].map(value => ({ value, source: 0, rank: 0 }));
   const data1 = data[1].map(value => ({ value, source: 1, rank: 0 }));
-  const dataAll = data0.concat(data1) as typeof data0;
+  const dataAll = [...data0, ...data1];
   dataAll.sort((a, b) => a.value - b.value);
   const n = dataAll.length;
   // iterate forwards, counting identical previous values (and stuffing them in the rank field)
@@ -57,14 +57,14 @@ export function mannWhitneyU(data: [number[], number[]]) {
   const u1 = rs[1] - n1 * (n1 + 1) * .5;
   const u = Math.min(u0, u1);
 
+  // calculate z and some two-tailed test thresholds
   // http://users.sussex.ac.uk/~grahamh/RM1web/Wilcoxon%20Large%20N%202009.pdf
   const mu = .5 * n0 * n1;
   const stdDev = Math.sqrt(((n0 * n1) * (n * n * n - n - tieSum)) / (12 * n * (n - 1)));
   const z = (mu - u - .5) / stdDev;
   const p95 = z > 1.96;
   const p99 = z > 2.58;
-
-  // now (for a two-tailed test), if z > 1.96, p < 0.05 and if z > 2.58, p < 0.01
+  
   return { u, z, p95, p99, u0, u1, dataAll };
 }
 
