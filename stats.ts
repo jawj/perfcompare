@@ -64,7 +64,7 @@ export function mannWhitneyU(data: [number[], number[]]) {
   const p95 = z > 1.96;
   const p99 = z > 2.58;
 
-  // now (for a two-tailed test), if z > 1.96, p < 0.5 and if z > 2.58, p < 0.01
+  // now (for a two-tailed test), if z > 1.96, p < 0.05 and if z > 2.58, p < 0.01
   return { u, z, p95, p99, u0, u1, dataAll };
 }
 
