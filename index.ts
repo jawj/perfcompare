@@ -1,9 +1,10 @@
 
 import { parse } from 'json-custom-numbers';
-import { variance, tTestT, tTestDf, pForT, median, mannWhitneyU } from './stats';
+import { median, mannWhitneyU } from './non-parametric';
+import { distrib } from './distrib';
 
 function log(...args: any[]) {
-  document.querySelector('body')!.innerText +=
+  (document.querySelector('#log') as HTMLDivElement).innerText +=
     args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ') + '\n';
 }
 
@@ -73,24 +74,31 @@ async function compare(...fns: (() => any)[]) {
   const tRepsMedians = tReps.map(tRep => median(tRep));
   const tRepsUStats = mannWhitneyU(tReps);
 
-  return { medians: tRepsMedians, ...tRepsUStats };
+  return { medians: tRepsMedians, ...tRepsUStats, tReps };
 }
 
 async function main() {
   const jsonDoc = `{"number":1,"string":"The quick brown fox\\njumps over the lazy dog \\u03bc","boolean":true,"null":null}`;
   const jsonDocSpaced = JSON.stringify(JSON.parse(jsonDoc), null, 2);
 
-  const { medians, u, z, p95, p99 } = await compare(() => parse(jsonDoc), () => parse(jsonDocSpaced));
-  log(`median: ${medians.join(',')}  u: ${u}  z: ${z}`);
+  const { medians, u, z, p, tReps } = await compare(() => parse(jsonDoc), () => parse(jsonDocSpaced));
+  log(`median: ${medians.join(',')}  u: ${u}  z: ${z}  p: ${p}`);
 
-  let sig1 = 0, sig5 = 0;
+  const img = document.querySelector('#svg') as HTMLImageElement;
+  const xml = distrib(tReps);
+  img.src = 'data:image/svg+xml,' + encodeURIComponent(xml);
+  // console.log(xml);
+
+
+  let sig1 = 0, sig5 = 0, sig10 = 0;
   for (let i = 0; i < 100; i++) {
-    const { medians, u, z, p95, p99 } = await compare(() => parse(jsonDoc), () => parse(jsonDoc));
-    log(`median: ${medians.join(',')}  u: ${u}  z: ${z}`);
-    if (p99) sig1++;
-    if (p95) sig5++;
-    log(`${sig1} at 1% level, ${sig5} at 5% level after ${i + 1} rounds`);
+    const { medians, u, z, p } = await compare(() => parse(jsonDoc), () => parse(jsonDoc));
+    log(`median: ${medians.join(',')}  u: ${u}  z: ${z}  p: ${p}`);
+    if (p < 0.01) sig1++;
+    if (p < 0.05) sig5++;
+    if (p < 0.1) sig10++;
+    log(`${sig1} at 1%, ${sig5} at 5%, ${sig10} at 10% after ${i + 1} rounds`);
   }
 }
 
-main();
+window.addEventListener('load', main);
