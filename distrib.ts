@@ -33,7 +33,7 @@ export function distrib(data: number[][], binCount = 24, size = [300, 150], colo
   const binUnitHeightPx = plotHeightPx / greatest;
 
   const baseline = size[1] - margins[2];
-  const smallLabelStyle = 'font: 9px sans-serif';
+  const smallLabelStyle = 'font: bold 9px sans-serif';
   const labelStyle = 'font: 12px sans-serif; margin: 0 4px;';
 
   return `<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
@@ -66,7 +66,7 @@ export function distrib(data: number[][], binCount = 24, size = [300, 150], colo
 
     return `
   <line x1="${x}" y1="${baseline + 3}" x2="${x}" y2="0" stroke="${colors[i]}"/>
-  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${0}" style="${smallLabelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">P50</text>
+  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${0}" style="${smallLabelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${String.fromCharCode(65 + i)}</text>
   <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${10}" style="${labelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${round(median)}</text>`
   
   })}
