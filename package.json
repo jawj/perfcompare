@@ -1,10 +1,9 @@
 {
   "name": "perfcompare",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "serve -p 8008 --no-clipboard",
     "watch": "esbuild index.ts --bundle --keep-names --format=iife --target=es2022 --platform=neutral --sourcemap=inline --watch --outdir=.",
     "start": "npm-run-all --parallel --race watch serve"
@@ -17,6 +16,8 @@
     "serve": "^14.2.0"
   },
   "dependencies": {
-    "json-custom-numbers": "^2.0.7"
+    "@types/mithril": "^2.0.12",
+    "json-custom-numbers": "^2.0.7",
+    "mithril": "^2.2.2"
   }
 }

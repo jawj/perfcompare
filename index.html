@@ -1,12 +1,39 @@
 <style>
   body {
     margin: 1em 2em;
-    font: 400 12px/1.5 Monaco, monospace;
-    white-space: pre-wrap;
   }
+
+  .compare {
+    font: 14px/1.25 sans-serif;
+    width: 400px;
+    padding: 10px 15px;
+    border: 1px solid #888;
+    background: #eee;
+    border-radius: 5px;
+    margin: 10px 0;
+  }
+  .compare .progress-outer {
+    margin: 7px 0;
+    background: #ccc;
+    border-radius: 2px;
+  }
+  .compare .progress-inner {
+    height: 10px;
+    background: #333;
+    border-radius: 2px;
+  }
+  .compare .hist {
+    margin-top: 15px;
+  }
+  .compare button {
+    margin: 10px 0 0;
+  }
+
 </style>
 
 <body>
+  <div id="compare1"></div>
+  <div id="compare2"></div>
   <img id="svg">
   <div id="log"></div>
 </body>

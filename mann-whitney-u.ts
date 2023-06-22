@@ -1,13 +1,4 @@
 
-export function median(data: number[], destructive = false) {
-  if (!destructive) data = data.slice();
-  const { length } = data;
-  data.sort((a, b) => a - b);
-  return length % 2 === 1 ?
-    data[(length - 1) * .5] :
-    .5 * data[length * .5 - 1] + .5 * data[length * .5];
-}
-
 function normalCDF(z: number) {  // https://www.math.ucla.edu/~tom/distributions/normal.html
   const t = 1 / (1 + .2316419 * Math.abs(z));
   const d = .3989423 * Math.exp(-z * z / 2);
@@ -60,7 +51,7 @@ export function mannWhitneyU(data: [number[], number[]]) {
   const u1 = r1 - n1 * (n1 + 1) * .5;
   const u = Math.min(u0, u1);
 
-  // calculate z and some two-tailed test thresholds
+  // calculate z and p
   // http://users.sussex.ac.uk/~grahamh/RM1web/Wilcoxon%20Large%20N%202009.pdf
   const mu = .5 * n0 * n1;
   const stdDev = Math.sqrt(((n0 * n1) * (n * n * n - n - tieSum)) / (12 * n * (n - 1)));

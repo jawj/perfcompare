@@ -1,11 +1,10 @@
-
-import { median } from './non-parametric';
+import { median } from './median';
 
 function round(n: number) {
   return n < 10 ? n.toPrecision(2) : n < 100 ? n.toFixed(1) : n.toFixed(0);
 }
 
-export function distrib(data: number[][], binCount = 24, size = [300, 150], colors = ['#e30', '#03e'], margins = [30, 20, 20, 20], xtitle="ops/sec") {
+export function histogram(data: number[][], binCount = 50, size = [400, 100], colors = ['#e30', '#03e'], margins = [30, 20, 20, 20], xtitle="ops/sec") {
   let min = Infinity, max = -Infinity;
   for (let dataSet of data) {
     min = Math.min(min, ...dataSet);
@@ -66,8 +65,8 @@ export function distrib(data: number[][], binCount = 24, size = [300, 150], colo
 
     return `
   <line x1="${x}" y1="${baseline + 3}" x2="${x}" y2="0" stroke="${colors[i]}"/>
-  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${0}" style="${smallLabelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${String.fromCharCode(65 + i)}</text>
-  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${10}" style="${labelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${round(median)}</text>`
+  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${2}" style="${smallLabelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${String.fromCharCode(65 + i)}</text>
+  <text dominant-baseline="hanging" x="${x + (i % 2 === lowestFirst ? 3 : -3)}" y="${12}" style="${labelStyle}" fill="${colors[i]}" text-anchor="${["start", "end"][(i % 2 === lowestFirst ? 0 : 1)]}">${round(median)}</text>`
   
   })}
 

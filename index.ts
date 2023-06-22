@@ -1,104 +1,102 @@
+import m from 'mithril';
 
-import { parse } from 'json-custom-numbers';
-import { median, mannWhitneyU } from './non-parametric';
-import { distrib } from './distrib';
+import { histogram } from './histogram';
+import { compare } from './compare';
 
-function log(...args: any[]) {
-  (document.querySelector('#log') as HTMLDivElement).innerText +=
-    args.map(a => typeof a === 'string' ? a : JSON.stringify(a)).join(' ') + '\n';
+import { parse as parse_native } from './implementations/01-native';
+import { parse as parse_jsonCustomNumbers } from './implementations/02-json-custom-numbers';
+import { parse as parse_crockford } from './implementations/03-crockford';
+
+import boolNull from './json-docs/bool-null-array.json';
+import longNumbers from './json-docs/long-numbers-array.json';
+import longStrings from './json-docs/long-strings-array.json';
+import shortNumbers from './json-docs/short-numbers-array.json';
+import shortStrings from './json-docs/short-strings-object.json';
+import stringEscapes from './json-docs/string-escapes.json';
+
+const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
+
+function speedCompare([a, b]: [number, number]) {
+  return b > a ?
+    (b / a).toFixed(1) + 'x faster' :
+    (a / b).toFixed(1) + 'x slower';
 }
 
-let t0, t1;
-t0 = t1 = performance.now();
-while (t0 === t1) { t1 = performance.now() };
-const msRes = t1 - t0;
-const usRes = Math.round(msRes * 1e3);
-log(`Resolution: ${usRes}\u03bcs`);
+async function compareUI(el: HTMLElement, fns: (() => any)[], names: string[]) {
+  let reps: number | undefined;
+  let trials: number | undefined;
+  let trial: number | undefined;
+  let dataURI: string | undefined;
+  let nameA: string;
+  let nameB: string;
 
-const trialDuration = Math.max(msRes * 100, 25);
-log(`Trial duration: ${trialDuration}ms`);
-
-const trials = 100;
-
-function opsPerDurationMs(fn: () => any, durationMs: number, toNearest = 10, maxOps = 2e9) {
-  const t0 = performance.now();
-  for (let i = 1; i < maxOps; i++) {  // it's important for various reasons that i starts at 1, not 0
-    fn();
-    if (i % toNearest === 0 && performance.now() - t0 >= durationMs) return i;
+  function reset() {
+    reps = trials = trial = dataURI = undefined;
+    nameA = `A. ${names[0]}`;
+    nameB = `B. ${names[1]}`;
   }
-  return maxOps;
-}
+  reset();
 
-async function fortyWinks() {
-  return new Promise(resolve => setTimeout(resolve, 0));
-}
+  m.mount(el, {
+    view: () => m('.compare',
+      m('.nameA', nameA),
+      m('.nameB', nameB),
+      dataURI ?
+        m('.hist', m('img', { src: dataURI })) :
+        [
+          m('.progress-outer', m('.progress-inner', {
+            style: { width: 100 * (trial && trials ? trial / trials : 0) + '%' }
+          })),
+          m('.trials', `${trial ?? '—'}/${trials ?? '—'} trials`),
+          m('.reps', `${reps ?? '—'} reps/trial`),
+        ],
+      m('button', {
+        disabled: trial && trials && trial < trials,
+        onclick: () => {
+          reset();
+          m.redraw();
 
-
-async function compare(...fns: (() => any)[]) {
-  const fnsLength = fns.length;
-
-  let reps = 0;
-  for (let i = 0; i < fnsLength; i++) {
-    const fn = fns[i];
-    const fnReps = opsPerDurationMs(fn, trialDuration);
-    log(fn.toString(), `-> ${fnReps} reps/trial`);
-    if (fnReps > reps) reps = fnReps;
-    await fortyWinks();
-  }
-
-  log(`Using ${reps} reps/trial`);
-
-  const tReps: [number[], number[]] = [[], []];
-  const tRepsSum: number[] = [0, 0];
-  const tRepsMean: number[] = [0, 0];
-
-  for (let trial = 0; trial < trials; trial++) {
-    for (let _i = 0; _i < fnsLength; _i++) {
-      // alternate functions (note: strangely, random assignment doesn't appear to work)
-      const i = trial % 2 ? _i : 1 - _i;
-
-      const fn = fns[i];
-      const t0 = performance.now();
-      for (let rep = 0; rep < reps; rep++) fn();
-      const t1 = performance.now();
-      const t = t1 - t0;
-      const tRep = 1 / (t / reps);
-      tReps[i][trial] = tRep;
-      tRepsSum[i] += tRep;
-      tRepsMean[i] = tRepsSum[i] / (trial + 1);
-    };
-    // log(trial, tRepsMean);
-    await fortyWinks();
-  }
-
-  const tRepsMedians = tReps.map(tRep => median(tRep));
-  const tRepsUStats = mannWhitneyU(tReps);
-
-  return { medians: tRepsMedians, ...tRepsUStats, tReps };
+          compare(
+            fns,
+            (newReps, newTrials, newTrial) => {
+              reps = newReps;
+              trials = newTrials;
+              trial = newTrial;
+              m.redraw();
+            }
+          ).then(({ medians, u, z, p, tReps }) => {
+            const xml = histogram(tReps);
+            dataURI = 'data:image/svg+xml,' + encodeURIComponent(xml);
+            nameB += ': ' + (
+              p! >= 0.01 ? 'no significant difference' :
+                speedCompare(medians as [number, number])
+            ) + ` (U = ${u}, p = ${p!.toPrecision(2)})`;
+            m.redraw();
+          });          
+        }
+      }, trial && trials && trial < trials ? 'Comparing …' : 'Compare' + (reps ? ' again' : ''))
+    )
+  });
 }
 
 async function main() {
-  const jsonDoc = `{"number":1,"string":"The quick brown fox\\njumps over the lazy dog \\u03bc","boolean":true,"null":null}`;
-  const jsonDocSpaced = JSON.stringify(JSON.parse(jsonDoc), null, 2);
+  compareUI(
+    document.querySelector('#compare1')!,
+    [
+      () => parse_native(jsonMixed),
+      () => parse_crockford(jsonMixed),
+    ],
+    ['Native JSON.parse', 'Crockford reference']
+  );
 
-  const { medians, u, z, p, tReps } = await compare(() => parse(jsonDoc), () => parse(jsonDocSpaced));
-  log(`median: ${medians.join(',')}  u: ${u}  z: ${z}  p: ${p}`);
-
-  const img = document.querySelector('#svg') as HTMLImageElement;
-  const xml = distrib(tReps);
-  img.src = 'data:image/svg+xml,' + encodeURIComponent(xml);
-  // console.log(xml);
-
-
-  let sig1 = 0, sig5 = 0, sig10 = 0;
-  for (let i = 0; i < 100; i++) {
-    const { medians, u, z, p } = await compare(() => parse(jsonDoc), () => parse(jsonDoc));
-    log(`median: ${medians.join(',')}  u: ${u}  z: ${z}  p: ${p}`);
-    if (p < 0.01) sig1++;
-    if (p < 0.05) sig5++;
-    if (p < 0.1) sig10++;
-    log(`${sig1} at 1%, ${sig5} at 5%, ${sig10} at 10% after ${i + 1} rounds`);
-  }
+  compareUI(
+    document.querySelector('#compare2')!,
+    [
+      () => parse_native(jsonMixed),
+      () => parse_jsonCustomNumbers(jsonMixed),
+    ],
+    ['Native JSON.parse', 'json-custom-numbers']
+  );
 }
 
 window.addEventListener('load', main);
