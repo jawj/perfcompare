@@ -12,6 +12,10 @@
     border-radius: 5px;
     margin: 10px 0;
   }
+  .compare .title {
+    font-weight: bold;
+    margin: 0 0 5px;
+  }
   .compare .progress-outer {
     margin: 7px 0;
     background: #ccc;
@@ -32,8 +36,11 @@
 </style>
 
 <body>
-  <div id="compare1"></div>
-  <div id="compare2"></div>
+  <div id="compare1"></div> (slower: Chrome 4.8x, Safari 6.3x, Firefox 8.7x)
+  <div id="long-strings"></div> (slower: Firefox 6.1x, Chome 7.2x, Safari 14.5x)
+  <div id="long-strings-quicker"></div> ()
+
+  <div id="compare2"></div> (slower: Safari 1.6x, Chrome 1.7x, Firefox 2.2x)
   <img id="svg">
   <div id="log"></div>
 </body>
