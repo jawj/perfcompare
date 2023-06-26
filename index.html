@@ -1,10 +1,10 @@
 <style>
   body {
     margin: 1em 2em;
+    font: 14px/1.25 sans-serif;
   }
 
   .compare {
-    font: 14px/1.25 sans-serif;
     width: 400px;
     padding: 10px 15px;
     border: 1px solid #888;
@@ -33,13 +33,82 @@
     margin: 10px 0 0;
   }
 
+  .conform {
+    width: 400px;
+    position: relative;
+    padding: 10px 15px;
+    border: 1px solid #393;
+    border-radius: 5px;
+    background: #dfc;
+  }
+  .conform:has(.invalid-accepted, .ambiguous-different) {
+    background: #ffc;
+    border-color: #c90;
+  }
+  .conform:has(.valid-throws-error, .valid-parsed-wrong) {
+    background: #fcc;
+    border-color: #c30;
+  }
+  .matched {
+    color: #393;
+  }
+  .invalid-accepted, .ambiguous-different {
+    color: #c90;
+  }
+  .valid-throws-error, .valid-parsed-wrong {
+    color: #c30;
+  }
+
+  ul {
+    padding-left: .5ex;
+    margin: .5ex 0;
+  }
+  li {
+    margin: 0.25ex 0;
+  }
+
+  .code {
+    font: 85%/1.3 Menlo, Monaco, monospace;
+  }
+
+  .collapsible {
+    position: relative;
+  }
+  .collapsible input[type=checkbox] {
+    display: none;
+  }
+  .collapsible input[type=checkbox]+.toggle, .collapsible input[type=checkbox]+.toggle+.content {
+    margin-left: 1.25em;
+  }
+  .collapsible input[type=checkbox]+.toggle::before {
+    content: "▶︎";
+    width: 1em;
+    font-size: 65%;
+    margin: .7ex 1ex 0 0;
+    transition: transform .25s;
+    position: absolute;
+    left: 0;
+  }
+  .collapsible input[type=checkbox]:checked+.toggle::before {
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
+  .collapsible input[type=checkbox]+.toggle+.content {
+    display: none;
+  }
+  .collapsible input[type=checkbox]:checked+.toggle+.content {
+    display: block; 
+  }
+
 </style>
 
 <body>
+  <div id="conform1"></div>
   <div id="compare1"></div> (slower: Chrome 4.8x, Safari 6.3x, Firefox 8.7x)
   <div id="long-strings"></div> (slower: Firefox 6.1x, Chome 7.2x, Safari 14.5x)
-  <div id="long-strings-quicker"></div> ()
+  <div id="long-strings-quicker"></div>
 
+  <div id="conform2"></div>
   <div id="compare2"></div> (slower: Safari 1.6x, Chrome 1.7x, Firefox 2.2x)
   <img id="svg">
   <div id="log"></div>

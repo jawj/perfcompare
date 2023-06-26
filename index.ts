@@ -47,7 +47,7 @@ function testParse(parse: (json: string) => any, json: string) {
 }
 
 function testParseAll(parse: (json: string) => any) {
-  let matchedOutcomeCount = 0;
+  let matchedOutcomes = [];
   let validJSONUnexpectedErrors = [];
   let validJSONDifferentResults = [];
   let invalidJSONUnexpectedSuccesses = [];
@@ -56,14 +56,15 @@ function testParseAll(parse: (json: string) => any) {
   for (const key in testsJson) {
     const json = testsJson[key as TestKey];
     const result = testParse(parse, json);
+    const details = { key, json, ...result };
 
     if (result === undefined) {
-      matchedOutcomeCount++;
+      matchedOutcomes.push(details);
       continue;
     }
 
     const prefix = key.match(/^[^_]+/)![0];  // y, n, i, number, object, string
-    const details = {key, json, ...result};
+
     switch (prefix) {
       case 'y':
         if (result.error) validJSONUnexpectedErrors.push(details);
@@ -76,12 +77,11 @@ function testParseAll(parse: (json: string) => any) {
 
       default:
         indeterminateJSONDifferentOutcomes.push(details);
-        break;
     }
   }
 
   return {
-    matchedOutcomeCount,
+    matchedOutcomes,
     validJSONUnexpectedErrors,
     validJSONDifferentResults,
     invalidJSONUnexpectedSuccesses,
@@ -89,7 +89,76 @@ function testParseAll(parse: (json: string) => any) {
   };
 }
 
-console.log(testParseAll(parse_crockford));
+function collapsible(toggle: m.Vnode, content: m.Vnode) {
+  return m('.collapsible',
+    m('label',
+      m('input', { type: 'checkbox' }),
+      m('.toggle', toggle),
+      m('.content', content)),
+  );
+}
+
+function conformanceUI(el: HTMLElement, parse: (json: string) => any, title: string) {
+  let results = testParseAll(parse);
+  let counts = Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.length])) as Record<keyof typeof results, number>;
+
+  m.render(el, m('.conform',
+    m('.matched', `${results.matchedOutcomes.length} outcomes match JSON.parse`),
+
+    counts.invalidJSONUnexpectedSuccesses > 0 &&
+    m('.invalid-accepted', collapsible(
+      m('div', `${counts.invalidJSONUnexpectedSuccesses} invalid documents accepted`),
+      m('ul', results.invalidJSONUnexpectedSuccesses.map(ue =>
+        m('li', 'test: ', ue.key,
+          m('ul.details',
+            m('li', 'Input: ', m('span.code', ue.json)),
+            m('li', 'Expected error: ', m('span.code', (ue as any).error))
+          )
+        )
+      )),
+    )),
+
+    counts.indeterminateJSONDifferentOutcomes > 0 &&
+    counts.validJSONDifferentResults > 0 &&
+    m('.ambiguous-different', collapsible(
+      m('div', `${counts.indeterminateJSONDifferentOutcomes} ambiguous documents parsed differently`),
+      m('ul', results.validJSONDifferentResults.map(ue =>
+        m('li', 'test: ', ue.key,
+          m('ul.details',
+            m('li', 'Expected: ', m('span.code', (ue as any).expected)),
+            m('li', 'Actual: ', m('span.code', (ue as any).actual))
+          )
+        )
+      )),
+    )),
+
+    counts.validJSONUnexpectedErrors > 0 && m('.valid-throws-error', collapsible(
+      m('div', `${counts.validJSONUnexpectedErrors} errors thrown on valid (or ambiguous) documents`),
+      m('ul', results.validJSONUnexpectedErrors.map(ue =>
+        m('li', 'test: ', ue.key,
+          m('ul.details',
+            m('li', 'Input: ', m('span.code', ue.json)),
+            m('li', 'Error: ', m('span.code', (ue as any).error))
+          )
+        )
+      ))
+    )),
+
+    counts.validJSONDifferentResults > 0 &&
+    m('.valid-parsed-wrong', collapsible(
+      m('div', `${counts.validJSONDifferentResults} valid documents parsed wrongly`),
+      m('ul', results.validJSONDifferentResults.map(ue =>
+        m('li', 'test: ', ue.key,
+          m('ul.details',
+            m('li', 'Expected: ', m('span.code', (ue as any).expected)),
+            m('li', 'Actual: ', m('span.code', (ue as any).actual))
+          )
+        )
+      )),
+    )),
+  ));
+}
+
 
 const jsonLongStrings = JSON.stringify(longStrings);
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
@@ -100,7 +169,7 @@ function speedCompare([a, b]: [number, number]) {
     (a / b).toFixed(1) + 'x slower';
 }
 
-async function compareUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[]) {
+function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[]) {
   let reps: number | undefined;
   let trials: number | undefined;
   let trial: number | undefined;
@@ -158,8 +227,10 @@ async function compareUI(el: HTMLElement, fns: (() => any)[], title: string, nam
   });
 }
 
-async function main() {
-  compareUI(
+function main() {
+  conformanceUI(document.querySelector('#conform1')!, parse_crockford, 'Crockford reference');
+
+  performanceUI(
     document.querySelector('#compare1')!,
     [
       () => parse_native(jsonMixed),
@@ -169,7 +240,7 @@ async function main() {
     ['Native JSON.parse', 'Crockford reference']
   );
 
-  compareUI(
+  performanceUI(
     document.querySelector('#long-strings')!,
     [
       () => parse_native(jsonLongStrings),
@@ -179,7 +250,7 @@ async function main() {
     ['Native JSON.parse', 'Crockford reference']
   );
 
-  compareUI(
+  performanceUI(
     document.querySelector('#long-strings-quicker')!,
     [
       () => parse_crockford(jsonLongStrings),
@@ -189,7 +260,9 @@ async function main() {
     ['Crockford', 'Strings with /.../y.test()']
   );
 
-  compareUI(
+  conformanceUI(document.querySelector('#conform2')!, parse_jsonCustomNumbers, 'json-custom-numbers');
+
+  performanceUI(
     document.querySelector('#compare2')!,
     [
       () => parse_native(jsonMixed),
