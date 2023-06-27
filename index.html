@@ -41,6 +41,12 @@
     border-radius: 5px;
     background: #dfc;
   }
+  .conform:has(.matched)::before {
+    content: '✅';
+    width: 1.5ex;
+    float: left;
+    margin-right: 1.5ex;
+  }
   .conform:has(.invalid-accepted, .ambiguous-different) {
     background: #ffc;
     border-color: #c90;
@@ -77,21 +83,26 @@
   .collapsible input[type=checkbox] {
     display: none;
   }
+  .collapsible input[type=checkbox]+.toggle {
+    cursor: pointer;
+  }
   .collapsible input[type=checkbox]+.toggle, .collapsible input[type=checkbox]+.toggle+.content {
-    margin-left: 1.25em;
+    margin-left: 1.5em;
   }
   .collapsible input[type=checkbox]+.toggle::before {
     content: "▶︎";
     width: 1em;
     font-size: 65%;
-    margin: .7ex 1ex 0 0;
-    transition: transform .25s;
+    margin: .7ex 1.75ex 0 .25ex;
+    transition: all .25s;
     position: absolute;
     left: 0;
+    cursor: pointer;
   }
   .collapsible input[type=checkbox]:checked+.toggle::before {
     transform: rotate(90deg);
     transform-origin: center;
+    margin: .7ex 2ex 0 0;
   }
   .collapsible input[type=checkbox]+.toggle+.content {
     display: none;

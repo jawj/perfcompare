@@ -101,13 +101,14 @@ function collapsible(toggle: m.Vnode, content: m.Vnode) {
 function conformanceUI(el: HTMLElement, parse: (json: string) => any, title: string) {
   let results = testParseAll(parse);
   let counts = Object.fromEntries(Object.entries(results).map(([k, v]) => [k, v.length])) as Record<keyof typeof results, number>;
+  let allMatched = results.matchedOutcomes.length === Object.keys(testsJson).length;
 
   m.render(el, m('.conform',
-    m('.matched', `${results.matchedOutcomes.length} outcomes match JSON.parse`),
+    m('.matched', m('b', (allMatched ? 'All ' : '') + results.matchedOutcomes.length), ' outcomes match JSON.parse'),
 
     counts.invalidJSONUnexpectedSuccesses > 0 &&
     m('.invalid-accepted', collapsible(
-      m('div', `${counts.invalidJSONUnexpectedSuccesses} invalid documents accepted`),
+      m('div', m('b', counts.invalidJSONUnexpectedSuccesses), ' invalid documents accepted'),
       m('ul', results.invalidJSONUnexpectedSuccesses.map(ue =>
         m('li', 'test: ', ue.key,
           m('ul.details',
@@ -121,7 +122,7 @@ function conformanceUI(el: HTMLElement, parse: (json: string) => any, title: str
     counts.indeterminateJSONDifferentOutcomes > 0 &&
     counts.validJSONDifferentResults > 0 &&
     m('.ambiguous-different', collapsible(
-      m('div', `${counts.indeterminateJSONDifferentOutcomes} ambiguous documents parsed differently`),
+      m('div', m('b', counts.indeterminateJSONDifferentOutcomes), ' ambiguous documents parsed differently'),
       m('ul', results.validJSONDifferentResults.map(ue =>
         m('li', 'test: ', ue.key,
           m('ul.details',
@@ -133,7 +134,7 @@ function conformanceUI(el: HTMLElement, parse: (json: string) => any, title: str
     )),
 
     counts.validJSONUnexpectedErrors > 0 && m('.valid-throws-error', collapsible(
-      m('div', `${counts.validJSONUnexpectedErrors} errors thrown on valid (or ambiguous) documents`),
+      m('div', m('b', counts.validJSONUnexpectedErrors), ' errors thrown on valid (or ambiguous) documents'),
       m('ul', results.validJSONUnexpectedErrors.map(ue =>
         m('li', 'test: ', ue.key,
           m('ul.details',
@@ -146,7 +147,7 @@ function conformanceUI(el: HTMLElement, parse: (json: string) => any, title: str
 
     counts.validJSONDifferentResults > 0 &&
     m('.valid-parsed-wrong', collapsible(
-      m('div', `${counts.validJSONDifferentResults} valid documents parsed wrongly`),
+      m('div', m('b', counts.validJSONDifferentResults), ' valid documents parsed wrongly'),
       m('ul', results.validJSONDifferentResults.map(ue =>
         m('li', 'test: ', ue.key,
           m('ul.details',
