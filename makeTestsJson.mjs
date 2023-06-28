@@ -1,3 +1,5 @@
+// run: node makeTestsJson.mjs > testsJson.mjs
+
 import fs from 'fs';
 import path from 'path';
 

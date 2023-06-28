@@ -14,6 +14,9 @@ function charCodeMap(charCode: number) {  // https://developer.mozilla.org/en-US
               undefined;
 }
 
+const valueByCharCode = new Array(123);
+for (let i = 0; i < 123; i ++) valueByCharCode[i] = charCodeMap(i);
+
 export function base64Decode(input: string) {
   const len = input.length;
   let inputIdx = 0, outputIdx = 0;
@@ -21,10 +24,10 @@ export function base64Decode(input: string) {
   const output = new Uint8Array(len * .75);
 
   while (inputIdx < len) {
-    enc1 = charCodeMap(input.charCodeAt(inputIdx++))!;
-    enc2 = charCodeMap(input.charCodeAt(inputIdx++))!;
-    enc3 = charCodeMap(input.charCodeAt(inputIdx++))!;
-    enc4 = charCodeMap(input.charCodeAt(inputIdx++))!;
+    enc1 = valueByCharCode[input.charCodeAt(inputIdx++)];
+    enc2 = valueByCharCode[input.charCodeAt(inputIdx++)];
+    enc3 = valueByCharCode[input.charCodeAt(inputIdx++)];
+    enc4 = valueByCharCode[input.charCodeAt(inputIdx++)];
     output[outputIdx++] = (enc1 << 2) | (enc2 >> 4);
     output[outputIdx++] = ((enc2 & 15) << 4) | (enc3 >> 2);
     output[outputIdx++] = ((enc3 & 3) << 6) | enc4;
