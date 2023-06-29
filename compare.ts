@@ -9,16 +9,17 @@ const msRes = t1 - t0;
 const usRes = Math.round(msRes * 1e3);
 log(`Resolution: ${usRes}\u03bcs`);
 
-const trialDuration = Math.max(msRes * 100, 10);
+const trialDuration = Math.max(msRes * 100, 20);
 log(`Target trial duration: ${trialDuration}ms`);
 
 const trials = 50;
 
-function opsPerDurationMs(fn: () => any, durationMs: number, toNearest = 10, maxOps = 2e9) {
+function opsPerDurationMs(fn: () => any, durationMs: number, toNearest = 10, multiplier = 5, maxOps = 2e9) {
   const t0 = performance.now();
+  const targetMs = durationMs * multiplier;
   for (let i = 1; i < maxOps; i++) {  // it's important for various reasons that i starts at 1, not 0
     fn();
-    if (i % toNearest === 0 && performance.now() - t0 >= durationMs) return i;
+    if (i % toNearest === 0 && performance.now() - t0 >= targetMs) return Math.ceil(i / multiplier);
   }
   return maxOps;
 }

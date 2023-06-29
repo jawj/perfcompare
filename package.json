@@ -19,7 +19,7 @@
     "@types/json-bigint": "^1.0.1",
     "@types/mithril": "^2.0.12",
     "json-bigint": "^1.0.0",
-    "json-custom-numbers": "^2.0.7",
+    "json-custom-numbers": "^2.0.8",
     "lossless-json": "^2.0.9",
     "mithril": "^2.2.2"
   }

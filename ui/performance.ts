@@ -13,12 +13,13 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
   let reps: number | undefined;
   let trials: number | undefined;
   let trial: number | undefined;
-  let dataURI: string | undefined;
+  let SVGDataURI: string | undefined;
   let nameA: string;
   let nameB: string;
+  let started = false;
 
   function reset() {
-    reps = trials = trial = dataURI = undefined;
+    reps = trials = trial = SVGDataURI = undefined;
     nameA = `A. ${names[0]}`;
     nameB = `B. ${names[1]}`;
   }
@@ -29,19 +30,20 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
       m('.title', title),
       m('.nameA', nameA),
       m('.nameB', nameB),
-      dataURI ?
-        m('.hist', m('img', { src: dataURI })) :
+      SVGDataURI ?
+        m('.hist', m('img', { src: SVGDataURI })) :
         [
           m('.progress-outer', m('.progress-inner', {
             style: { width: 100 * (trial && trials ? trial / trials : 0) + '%' }
           })),
           m('.trials', `${trial ?? '—'}/${trials ?? '—'} trials`),
-          m('.reps', `${reps ?? '—'} reps/trial`),
+          m('.reps', `${reps ?? (started ? 'Calculating' : '—')} reps/trial`),
         ],
       m('button', {
         disabled: trial && trials && trial < trials,
         onclick: () => {
           reset();
+          started = true;
           m.redraw();
 
           compare(
@@ -54,7 +56,7 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
             }
           ).then(({ medians, u, z, p, tReps }) => {
             const xml = histogram(tReps);
-            dataURI = 'data:image/svg+xml,' + encodeURIComponent(xml);
+            SVGDataURI = 'data:image/svg+xml,' + encodeURIComponent(xml);
             nameB += ': ' + (
               p! >= 0.01 ? 'no significant difference' :
                 speedCompare(medians as [number, number])
