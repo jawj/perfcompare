@@ -9,7 +9,7 @@ const msRes = t1 - t0;
 const usRes = Math.round(msRes * 1e3);
 log(`Resolution: ${usRes}\u03bcs`);
 
-const trialDuration = Math.max(msRes * 100, 20);
+const trialDuration = Math.max(msRes * 100, 10);
 log(`Target trial duration: ${trialDuration}ms`);
 
 const trials = 50;

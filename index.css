@@ -4,6 +4,21 @@ body {
   background: #eee;
 }
 
+.conform .conform-title, .compare .compare-title {
+  font-weight: bold;
+  color: #888;
+  letter-spacing: 2px;
+  font-variant: small-caps;
+  text-transform: lowercase;
+  padding-bottom: 0.5ex;
+  border-bottom: 1px #ccc solid;
+  margin-bottom: 1.25ex;
+}
+.conform .title, .compare .title {
+  font-weight: bold;
+  margin: 0 0 5px;
+}
+
 .compare {
   width: 400px;
   padding: 10px 15px;
@@ -11,10 +26,6 @@ body {
   background: #fff;
   border-radius: 5px;
   margin: 10px 0;
-}
-.compare .title {
-  font-weight: bold;
-  margin: 0 0 5px;
 }
 .compare .progress-outer {
   margin: 7px 0;
@@ -30,7 +41,7 @@ body {
   margin-top: 15px;
 }
 .compare button {
-  margin: 10px 0 0;
+  margin: 10px 0 3px;
 }
 
 .conform {
@@ -41,7 +52,8 @@ body {
   border-radius: 5px;
   background: #fff;
 }
-.conform:has(.matched)::before {
+
+.matched::before {
   content: '✅';
   width: 1.5ex;
   float: left;

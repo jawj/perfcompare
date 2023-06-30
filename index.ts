@@ -20,14 +20,14 @@ const jsonLongStrings = JSON.stringify(longStrings);
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
 
 function main() {
-  conformanceUI(document.querySelector('#conform-crockford')!, parse_crockford, 'Crockford reference');
+  conformanceUI(document.querySelector('#conform-crockford')!, parse_crockford, 'Crockford');
   performanceUI(
     document.querySelector('#compare-crockford')!,
     [
       () => parse_native(jsonMixed),
       () => parse_crockford(jsonMixed),
     ],
-    'Parse mixed JSON',
+    'Crockford vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'Crockford reference']
   );
 
@@ -38,18 +38,18 @@ function main() {
       () => parse_native(jsonMixed),
       () => parse_jsonBigint(jsonMixed),
     ],
-    'Parse mixed JSON',
+    'json-bigint vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'json-bigint']
   );
 
-  conformanceUI(document.querySelector('#conform-lossless-json')!, parse_losslessJson, 'json-bigint');
+  conformanceUI(document.querySelector('#conform-lossless-json')!, parse_losslessJson, 'lossless-json');
   performanceUI(
     document.querySelector('#compare-lossless-json')!,
     [
       () => parse_native(jsonMixed),
       () => parse_losslessJson(jsonMixed),
     ],
-    'Parse mixed JSON',
+    'lossless-json vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'lossless-json']
   );
 
@@ -60,7 +60,7 @@ function main() {
       () => parse_native(jsonMixed),
       () => parse_jsonCustomNumbers(jsonMixed),
     ],
-    'Parse mixed JSON',
+    'json-custom-numbers vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'json-custom-numbers']
   );
 

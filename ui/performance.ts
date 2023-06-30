@@ -5,8 +5,8 @@ import { compare } from '../compare';
 
 function speedCompare([a, b]: [number, number]) {
   return b > a ?
-    (b / a).toFixed(1) + 'x faster' :
-    (a / b).toFixed(1) + 'x slower';
+    (b / a).toFixed(1) + '\u00d7 faster' :
+    (a / b).toFixed(1) + '\u00d7 slower';
 }
 
 export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[]) {
@@ -27,9 +27,10 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
 
   m.mount(el, {
     view: () => m('.compare',
+      m('.compare-title', 'Performance'),
       m('.title', title),
-      m('.nameA', nameA),
-      m('.nameB', nameB),
+      m('.nameA', m.trust(nameA)),
+      m('.nameB', m.trust(nameB)),
       SVGDataURI ?
         m('.hist', m('img', { src: SVGDataURI })) :
         [
@@ -60,7 +61,7 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
             nameB += ': ' + (
               p! >= 0.01 ? 'no significant difference' :
                 speedCompare(medians as [number, number])
-            ) + ` (U = ${u}, p = ${p!.toPrecision(2)})`;
+            ) + ` (<a href="https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test"><i>U</i></a> = ${u}, p ${p! < 0.001 ? '< 0.001' : '= ' + p!.toPrecision(2)})`;
             m.redraw();
           });
         }
