@@ -3,13 +3,16 @@
   <h2>Custom JSON parsing in JavaScript: important, now also conformant and performant</h2>
   <h3>JSON in Postgres</h3>
   <p>
-    JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
+    Whatever your opinions on it, JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
   </p>
   <p>
-    I used JSON in my first production Postgres database, which sat behind a back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. The API would pick out the fields it understood, and store and index them as ordinary columns. Then it shoved the whole JSON object into its own column, preserving all the other data that I later analysed in my research.
+    I used JSON in my first production Postgres database, which sat behind a back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. The API would pick out the fields it understood, and store and index them as ordinary columns. Then it shoved the whole JSON object into its own column, preserving all the other data for me to retrieve and analyse later.
   </p>
   <p>
-    Back then, in 2010, this data just went into the database as `text`. But it wasn't too long before Postgres added a native JSON type (with version 9.2 in 2012). Its JSON support has become steadily more powerful since then. You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
+    Back then, in 2010, this JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then. 
+  </p>
+  <p> 
+    You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
   </p>
   <h3>Trouble with numbers</h3>
   <p>
@@ -24,10 +27,10 @@
     await { rows } = pool.query('SELECT (1e16 + 1)::bigint AS big');
     // -> [{ big: '10000000000000001' }]
   </code>
-  <p>This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt(string)`</a>.
+  <p>This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt(string)`</a>.
   </p>
   <p>
-    Now, what if you return the same number as a JSON value? Perhaps surprisingly, <a href="https://www.json.org/json-en.html">the JSON spec</a> allows arbitrarily large numbers, so Postgres goes right ahead and encodes them. Then the JSON is parsed using JavaScript's `JSON.parse`, and bad things happen.
+    Now, what if you return the same number as a JSON value? Perhaps surprisingly, <a href="https://www.json.org/json-en.html">the JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them. The JSON value then gets parsed with JavaScript's `JSON.parse` and, if it's bigger than JavaScript's `Number.MAX_SAFE_INTEGER`, bad things happen.
   </p>
   <code>
     await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
@@ -38,15 +41,16 @@
   </p>
   <p>The solution</p>
   <p>
-    The solution to this is to roll your own JSON parser, and tell your Postgres driver to use it for JSON values. For node-postgres (and thus also @neondatabase/serverless), you do it like this:
+    The solution to this is to use a custom JSON parser that can handle big numbers appropriately, and tell your Postgres driver to use it for JSON values. For both node-postgres and @neondatabase/serverless, you do it like this:
   </p>
   <code>
-    import { types } from 'pg';
+    import { types } from '@neondatabase/serverless';  // or 'pg'
+    
     function myJSONParse(json) { /* ... implementation ... */ }
     types.setTypeParser(types.builtins.JSONB, myJSONParse);
   </code>
   <p>
-    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64`, and the damage is done).
+    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64` and the damage is done).
   </p>
 
   <h2>Crockford reference</h2>
