@@ -1,15 +1,15 @@
 <link rel="stylesheet" href="index.css">
 <body>
-  <h2>Custom JSON parsing in JavaScript: important, now also conformant and performant</h2>
+  <h2>Custom JSON parsing in JavaScript: important, conformant, performant</h2>
   <h3>JSON in Postgres</h3>
   <p>
-    Whatever your opinions on it, JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
+    However you feel about it, JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
   </p>
   <p>
-    I used JSON in my first production Postgres database, which sat behind a back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. The API would pick out the fields it understood, and store and index them as ordinary columns. Then it shoved the whole JSON object into its own column, preserving all the other data for me to retrieve and analyse later.
+    I used JSON in my first production Postgres database, which sat behind the back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. From that JSON document, the API picked out a few fields it needed, storing and indexing them as ordinary columns. That done, it shoved the whole JSON object into its own column, preserving everything else for me to retrieve and analyse later.
   </p>
   <p>
-    Back then, in 2010, this JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then. 
+    Back then, in 2010, the JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then. 
   </p>
   <p> 
     You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
@@ -23,34 +23,41 @@
   </p>
   <p>
     JavaScript Postgres drivers typically parse these values into strings. For example:
+  </p>
   <code>
     await { rows } = pool.query('SELECT (1e16 + 1)::bigint AS big');
     // -> [{ big: '10000000000000001' }]
   </code>
-  <p>This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt(string)`</a>.
+  <p>
+    This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt()`</a>.
   </p>
   <p>
-    Now, what if you return the same number as a JSON value? Perhaps surprisingly, <a href="https://www.json.org/json-en.html">the JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them. The JSON value then gets parsed with JavaScript's `JSON.parse` and, if it's bigger than JavaScript's `Number.MAX_SAFE_INTEGER`, bad things happen.
+    Now: what if Postgres were to return that same `bigint` to JavaScript as a JSON value? <a href="https://www.json.org/json-en.html">The JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them. So the JSON number value gets parsed with JavaScript's `JSON.parse` and, if it's bigger than JavaScript's `Number.MAX_SAFE_INTEGER`, bad things happen.
   </p>
   <code>
     await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
     // -> [{ big: 10000000000000000 }]
   </code>
   <p>
-    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the number Postgres sent.
+    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent. Imagine this was the `id` value of a table row. Well, now it's the `id` of a different table row. [Sinister music plays].
   </p>
-  <p>The solution</p>
+  <p>The solution: custom JSON parsing</p>
   <p>
-    The solution to this is to use a custom JSON parser that can handle big numbers appropriately, and tell your Postgres driver to use it for JSON values. For both node-postgres and @neondatabase/serverless, you do it like this:
+    The solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both node-postgres and @neondatabase/serverless, you do that like so:
   </p>
   <code>
     import { types } from '@neondatabase/serverless';  // or 'pg'
-    
     function myJSONParse(json) { /* ... implementation ... */ }
     types.setTypeParser(types.builtins.JSONB, myJSONParse);
   </code>
   <p>
-    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64` and the damage is done).
+    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64`, and the damage is done).
+  </p>
+  <p>
+    There are two key things I want from a custom JSON parser. First, conformance: to avoid any surprises or complications, it must be a perfect drop-in replacement for `JSON.parse`. That means the same API and, critically, the same result for every input. Second, performance: it's unlikely ever to match the optimised C++ of native `JSON.parse`, but it should be the fastest JavaScript implementation we can muster. In certain contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, energy and money.
+  </p>
+  <p>
+    So: where might we find such a JSON parser? The npm packages `json-bigint` and `lossless-json` appear to have this covered. Are they up to the job?
   </p>
 
   <h2>Crockford reference</h2>
