@@ -3,7 +3,10 @@ import { performanceUI } from './ui/performance';
 
 import { parse as parse_native } from './implementations/01-native';
 import { parse as parse_jsonCustomNumbers } from './implementations/02-json-custom-numbers';
-import { parse as parse_jsonBigint } from './implementations/04-json-bigint';
+import { 
+  parseConform as parseConform_jsonBigint,
+  parsePerform as parsePerform_jsonBigint,
+} from './implementations/04-json-bigint';
 import { parse as parse_losslessJson } from './implementations/05-lossless-json';
 import { parse as parse_crockford } from './implementations/03-crockford';
 import { parse as parse_longStringsQuicker } from './implementations/10-strings';
@@ -31,12 +34,12 @@ function main() {
     ['Native JSON.parse', 'Crockford reference']
   );
 
-  conformanceUI(document.querySelector('#conform-json-bigint')!, parse_jsonBigint, 'json-bigint');
+  conformanceUI(document.querySelector('#conform-json-bigint')!, parseConform_jsonBigint, 'json-bigint');
   performanceUI(
     document.querySelector('#compare-json-bigint')!,
     [
       () => parse_native(jsonMixed),
-      () => parse_jsonBigint(jsonMixed),
+      () => parsePerform_jsonBigint(jsonMixed),
     ],
     'json-bigint vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'json-bigint']

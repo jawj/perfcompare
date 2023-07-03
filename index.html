@@ -1,9 +1,9 @@
 <link rel="stylesheet" href="index.css">
 
 <body>
-  <h2>Custom JSON parsing in JavaScript: important, conformant, performant</h2>
+  <h1>Custom JSON parsing in JavaScript: important, conformant, performant</h1>
 
-  <h3>JSON in Postgres</h3>
+  <h2>JSON in Postgres</h2>
   <p>
     However you feel about it, JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
   </p>
@@ -17,7 +17,7 @@
     You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
   </p>
 
-  <h3>Trouble with numbers</h3>
+  <h2>Trouble with numbers</h2>
   <p>
     But there's a problem when we use JSON to communicate values between Postgres and JavaScript.
   </p>
@@ -48,7 +48,7 @@
     [Sinister music plays]
   </p>
 
-  <h3>The solution: custom JSON parsing</h3>
+  <h2>The solution: custom JSON parsing</h2>
   <p>
     The solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both node-postgres and @neondatabase/serverless, you do that like so:
   </p>
@@ -78,14 +78,14 @@
     So: we're looking for a conformant, performant JSON parser that can deal flexibly with large numbers. Searching npm turns up two candidate packages: `json-bigint` and `lossless-json`. Are they up to the job?
   </p>
 
-  <h3>Conformance and performance testing</h3>
+  <h2>Conformance and performance testing</h2>
   <p>
     Behaving the same way as `JSON.parse` means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
   </p>
   <p>
     Assessing performance against `JSON.parse` will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to compare parsing of all the different kinds of JSON values.
   </p>
-    So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); backslash-escaped strings (like `\u03B1` and `\n`); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and `true`, `false` and `null`. These values are combined as objects or arrays, so that we capture speed on those container types too.
+    So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); and strings full of backslash escapes (like `\u03B1` and `\n`); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and `true`, `false` and `null`. These values are combined as objects or arrays, so that we capture speed on those container types too.
   </p>
   <p>
     For the headline comparison, all of these types are combined into a single large object: `{ "longStrings": ..., "shortStrings": ..., ... }`.
@@ -94,24 +94,44 @@
     The final piece of the puzzle is how to run the performance tests. Performance benchmarking JS code seems to have gone way out of fashion in recent years. jsperf.com has long gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about `performance.now()`.
   </p>
   <p>
-    I've thus put together our own simple head-to-head performance function. It checks timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are genuinely different.
+    I've thus put together our own simple head-to-head performance function. It checks `performance.now()` timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are meaningfully different.
+  </p>
+
+  <h3>json-bigint</h3>
+  <p>First up: json-bigint. The widgets below should tell the story.</p>
+  <div id="conform-json-bigint"></div>
+  <div id="compare-json-bigint"></div>
+  <p>
+    For conformance, the summary is that json-bigint parses all valid documents correctly, but it's significantly more lax in what it accepts than `JSON.parse`. It permits numbers in various illegal formats (such as `.1`, `1.`, `01`), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts as whitespace.
+  </p>
+  <p>
+    For performance, the headline number is that it's 6 – 8× slower than `JSON.parse` on my mixed JSON test document, depending on the browser and therefore JavaScript engine.
+  </p>
+  <p>
+    On flexibility, json-bigint offers various options, but not the one I really want, which is simply to allow me to supply a custom number parsing function.
+  </p>
+
+  <h3>lossless-json</h3>
+  <p>Next: lossless-json. How does it compare?</p>
+  <div id="conform-lossless-json"></div>
+  <div id="compare-lossless-json"></div>
+  <p>
+    Conformance-wise, the big item for lossless-json is that it throws errors on duplicate objects keys. It calls this a feature, and to be fair I guess it's inline with its "lossless" approach, but it's also a major incompatbility with `JSON.parse`.  It's also just slightly more relaxed than `JSON.parse` on number formats, allowing a leading decimal point with no zero (`.1`).
+  </p>
+  <p>
+    Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 5 – 7× slower than `JSON.parse`.
+  </p>
+  <p>
+    lossless-json scores points on flexibility too by taking a custom number parsing function as one of its options.
   </p>
 
   
 
-  <h2>Crockford reference</h2>
+  <h1>Crockford reference</h1>
   <div id="conform-crockford"></div>
   <div id="compare-crockford"></div> (slower: Chrome 8.4x, Safari 6.8x, Firefox 9.3x)
 
-  <h2>json-bigint</h2>
-  <div id="conform-json-bigint"></div>
-  <div id="compare-json-bigint"></div> (slower: Chrome 8.1x, Safari 5.6x, Firefox 7.8x)
-
-  <h2>lossless-json</h2>
-  <div id="conform-lossless-json"></div>
-  <div id="compare-lossless-json"></div> (slower: Chrome 6.0x, Safari 5.1x, Firefox 6.2x)
-
-  <h2>json-custom-numbers</h2>
+  <h1>json-custom-numbers</h1>
   <div id="conform-json-custom-numbers"></div>
   <div id="compare-json-custom-numbers"></div> (slower: Chrome 2.0x, Safari 1.7x, Firefox 1.7x)
 
