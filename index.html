@@ -1,6 +1,8 @@
 <link rel="stylesheet" href="index.css">
+
 <body>
   <h2>Custom JSON parsing in JavaScript: important, conformant, performant</h2>
+
   <h3>JSON in Postgres</h3>
   <p>
     However you feel about it, JSON is a popular data format. It's simple, human-readable, and can be serialized/deserialized almost anywhere.
@@ -9,14 +11,15 @@
     I used JSON in my first production Postgres database, which sat behind the back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. From that JSON document, the API picked out a few fields it needed, storing and indexing them as ordinary columns. That done, it shoved the whole JSON object into its own column, preserving everything else for me to retrieve and analyse later.
   </p>
   <p>
-    Back then, in 2010, the JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then. 
+    Back then, in 2010, the JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then.
   </p>
-  <p> 
+  <p>
     You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
   </p>
+
   <h3>Trouble with numbers</h3>
   <p>
-    But there's a problem when we use JSON to communicate values between Postgres and JavaScript. 
+    But there's a problem when we use JSON to communicate values between Postgres and JavaScript.
   </p>
   <p>
     JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 `float64`</a>. Postgres, of course, has many kinds. Some of these, like `bigint` or `numeric`, can represent larger and/or more precise numbers than a `float64`.
@@ -24,41 +27,77 @@
   <p>
     JavaScript Postgres drivers typically parse these values into strings. For example:
   </p>
-  <code>
+  <pre>
     await { rows } = pool.query('SELECT (1e16 + 1)::bigint AS big');
     // -> [{ big: '10000000000000001' }]
-  </code>
+  </pre>
   <p>
     This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt()`</a>.
   </p>
   <p>
     Now: what if Postgres were to return that same `bigint` to JavaScript as a JSON value? <a href="https://www.json.org/json-en.html">The JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them. So the JSON number value gets parsed with JavaScript's `JSON.parse` and, if it's bigger than JavaScript's `Number.MAX_SAFE_INTEGER`, bad things happen.
   </p>
-  <code>
+  <pre>
     await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
     // -> [{ big: 10000000000000000 }]
-  </code>
+  </pre>
   <p>
-    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent. Imagine this was the `id` value of a table row. Well, now it's the `id` of a different table row. [Sinister music plays].
+    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent. Imagine this was the `id` value of a table row. Well, now it's the `id` of a different table row.
   </p>
-  <p>The solution: custom JSON parsing</p>
+  <p>
+    [Sinister music plays]
+  </p>
+
+  <h3>The solution: custom JSON parsing</h3>
   <p>
     The solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both node-postgres and @neondatabase/serverless, you do that like so:
   </p>
-  <code>
-    import { types } from '@neondatabase/serverless';  // or 'pg'
+  <pre>
+    import { types } from '@neondatabase/serverless';  // or from 'pg'
     function myJSONParse(json) { /* ... implementation ... */ }
     types.setTypeParser(types.builtins.JSONB, myJSONParse);
-  </code>
+  </pre>
   <p>
     (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64`, and the damage is done).
   </p>
   <p>
-    There are two key things I want from a custom JSON parser. First, conformance: to avoid any surprises or complications, it must be a perfect drop-in replacement for `JSON.parse`. That means the same API and, critically, the same result for every input. Second, performance: it's unlikely ever to match the optimised C++ of native `JSON.parse`, but it should be the fastest JavaScript implementation we can muster. In certain contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, energy and money.
+    As I see it, there are three key things we're going to want from a custom JSON parser:
+  </p>
+  <ol>
+    <li>
+      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for `JSON.parse`. That means the same API and, critically, the same result for every input. 
+    </li>
+    <li>
+      Second, performance: it's unlikely ever to match the optimised C++ of native `JSON.parse`, but it should be the fastest gosh-darn JavaScript implementation we can come up with. In certain contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, energy and money.
+    </li>
+    <li>
+      And third, flexibility: when it comes across a large number (or indeed any number) in the JSON input, it should give us the chance to deal with it however we want.
+    </li>
+  </ol>
+  <p>
+    So: we're looking for a conformant, performant JSON parser that can deal flexibly with large numbers. Searching npm turns up two candidate packages: `json-bigint` and `lossless-json`. Are they up to the job?
+  </p>
+
+  <h3>Conformance and performance testing</h3>
+  <p>
+    Behaving the same way as `JSON.parse` means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
   </p>
   <p>
-    So: where might we find such a JSON parser? The npm packages `json-bigint` and `lossless-json` appear to have this covered. Are they up to the job?
+    Assessing performance against `JSON.parse` will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to compare parsing of all the different kinds of JSON values.
   </p>
+    So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); backslash-escaped strings (like `\u03B1` and `\n`); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and `true`, `false` and `null`. These values are combined as objects or arrays, so that we capture speed on those container types too.
+  </p>
+  <p>
+    For the headline comparison, all of these types are combined into a single large object: `{ "longStrings": ..., "shortStrings": ..., ... }`.
+  </p>
+  <p>
+    The final piece of the puzzle is how to run the performance tests. Performance benchmarking JS code seems to have gone way out of fashion in recent years. jsperf.com has long gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about `performance.now()`.
+  </p>
+  <p>
+    I've thus put together our own simple head-to-head performance function. It checks timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are genuinely different.
+  </p>
+
+  
 
   <h2>Crockford reference</h2>
   <div id="conform-crockford"></div>
