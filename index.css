@@ -1,7 +1,7 @@
 body {
   margin: 2em 4em;
   font: 15px/1.4 sans-serif;
-  background: #eee;
+  background: #fff;
 }
 
 h1 {
@@ -10,7 +10,7 @@ h1 {
 
 pre, code {
   font: 14px/1.5 Monaco, Menlo, "Cascadia Code", monospace;
-  background: #ddd;
+  background: #eee;
 }
 
 pre {
@@ -41,7 +41,7 @@ code {
   width: 400px;
   padding: 10px 15px;
   border: 1px solid #888;
-  background: #fff;
+  background: #f8f8f8;
   border-radius: 5px;
   margin: 10px 0;
 }
@@ -68,7 +68,7 @@ code {
   padding: 10px 15px;
   border: 1px solid #888;
   border-radius: 5px;
-  background: #fff;
+  background: #f8f8f8;
 }
 
 .matched::before {

@@ -9,7 +9,7 @@ function speedCompare([a, b]: [number, number]) {
     (a / b).toFixed(1) + '\u00d7 slower';
 }
 
-export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[]) {
+export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[], colors = ['#e30', '#03e']) {
   let reps: number | undefined;
   let trials: number | undefined;
   let trial: number | undefined;
@@ -20,8 +20,8 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
 
   function reset() {
     reps = trials = trial = SVGDataURI = undefined;
-    nameA = `A. ${names[0]}`;
-    nameB = `B. ${names[1]}`;
+    nameA = `<span style="color: ${colors[0]}; font-weight: bold;">A.</span> ${names[0]}`;
+    nameB = `<span style="color: ${colors[1]}; font-weight: bold;">B.</span> ${names[1]}`;
   }
   reset();
 
@@ -56,7 +56,7 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
               m.redraw();
             }
           ).then(({ medians, u, z, p, tReps }) => {
-            const xml = histogram(tReps);
+            const xml = histogram(tReps, 50, [400, 100], colors);
             SVGDataURI = 'data:image/svg+xml,' + encodeURIComponent(xml);
             nameB += ': ' + (
               p! >= 0.01 ? 'no significant difference' :
