@@ -10,7 +10,7 @@ export function conformanceUI(el: HTMLElement, parse: (json: string) => any, tit
 
   m.render(el, m('.conform',
     m('.conform-title', 'Conformance'),
-    m('.title', title),
+    m('.title', m.trust(title)),
     m('.matched', m('b', (allMatched ? 'All ' : '') + results.matchedOutcomes.length), ' outcomes match JSON.parse'),
 
     counts.invalidJSONUnexpectedSuccesses > 0 &&

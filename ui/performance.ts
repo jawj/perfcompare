@@ -28,7 +28,7 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
   m.mount(el, {
     view: () => m('.compare',
       m('.compare-title', 'Performance'),
-      m('.title', title),
+      m('.title', m.trust(title)),
       m('.nameA', m.trust(nameA)),
       m('.nameB', m.trust(nameB)),
       SVGDataURI ?

@@ -1,4 +1,3 @@
-
 export const parse = (function () {
   "use strict";
 
@@ -12,9 +11,6 @@ export const parse = (function () {
 
   var at;     // The index of the current character
   var ch;     // The current character
-
-  // these 'sticky' RegExps are used to parse (1) strings and (2) numbers, true/false and null
-  const stringChunkRegExp = /[^"\\\n\t\u0000-\u001f]*/y;
 
   var escapee = {
     "\"": "\"",
@@ -98,52 +94,48 @@ export const parse = (function () {
     }
   };
 
-  function string() {  // note: it's on you to check that ch == '"'.charCodeAt() before you call this
-    let str = "";
-    var value;
-
+  function string() {
+    let value = '';
     for (; ;) {
-      stringChunkRegExp.lastIndex = at;  // find next chunk without \ or " or invalid chars
-      stringChunkRegExp.test(text);
-
-      const { lastIndex } = stringChunkRegExp;
-      if (lastIndex > at) {
-        str += text.slice(at, lastIndex);
-        at = lastIndex;
+      const nextQuote = text.indexOf('"', at);
+      if (nextQuote === -1) error("Unterminated string");
+  
+      if (nextQuote === at) { // empty string: we're done
+        at = nextQuote + 1;
+        ch = text.charAt(at++);
+        return value;
       }
-
-      next();  // what comes after it?
-      switch (ch) {
-        case '"':  // end of string
-          next();
-          return str;
-
-        case '\\':  // backslash escape
-          next();
-          if (ch === "u") {
-            uffff = 0;
-            for (i = 0; i < 4; i += 1) {
-              hex = parseInt(next(), 16);
-              if (!isFinite(hex)) {
-                error("Invalid \\uXXXX escape sequence in string");
-              }
-              uffff = uffff * 16 + hex;
-            }
-            value += String.fromCharCode(uffff);
-
-          } else if (typeof escapee[ch] === "string") {
-            value += escapee[ch];
-
-          } else {
-            error("Invalid escape sequence in string");
+  
+      let chunk = text.slice(at, nextQuote);
+      const nextBackslash = chunk.indexOf("\\");
+      if (nextBackslash === -1) {  // no backslashes up to end quote: we're done
+        value += chunk;
+        at = nextQuote + 1;
+        ch = text.charAt(at++);
+        return value;
+  
+      } else {  // deal with backslash escapes
+        chunk = chunk.slice(0, nextBackslash);
+        value += chunk;
+        at += nextBackslash + 1;
+        ch = text.charAt(at++);
+  
+        const escape = escapee[ch];
+        if (escape) {
+          value += escape;
+  
+        } else if (ch === "u") {
+          let uffff = 0;
+          for (let i = 0; i < 4; i += 1) {
+            const hex = parseInt(ch = text.charAt(at++), 16);
+            if (!isFinite(hex)) error("Bad unicode escape in string");
+            uffff = uffff * 16 + hex;
           }
-          break;
-
-        case "":
-          error("Unterminated string");
-
-        default:
-          error("Invalid escape sequence in string");
+          value += String.fromCharCode(uffff);
+  
+        } else {
+          error("Bad escape sequence in string: '\\" + ch + "'")
+        }
       }
     }
   };

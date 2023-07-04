@@ -2,6 +2,7 @@ import m from 'mithril';
 
 import { conformanceUI } from './ui/conformance';
 import { performanceUI } from './ui/performance';
+import { collapsible } from './ui/collapsible';
 
 import { parse as parse_native } from './implementations/01-native';
 import { parse as parse_jsonCustomNumbers } from './implementations/02-json-custom-numbers';
@@ -11,7 +12,9 @@ import {
 } from './implementations/04-json-bigint';
 import { parse as parse_losslessJson } from './implementations/05-lossless-json';
 import { parse as parse_crockford } from './implementations/03-crockford';
-import { parse as parse_longStringsQuicker } from './implementations/10-strings';
+import { parse as parse_stringsIndexOf } from './implementations/09-strings-indexOf';
+import { parse as parse_stringsRegexpTest } from './implementations/10-strings-regexp-test';
+
 
 import boolNull from './json-docs/bool-null-array.json';
 import longNumbers from './json-docs/long-numbers-array.json';
@@ -19,7 +22,7 @@ import longStrings from './json-docs/long-strings-array.json';
 import shortNumbers from './json-docs/short-numbers-array.json';
 import shortStrings from './json-docs/short-strings-object.json';
 import stringEscapes from './json-docs/string-escapes.json';
-import { collapsible } from './ui/collapsible';
+
 
 
 const jsonLongStrings = JSON.stringify(longStrings);
@@ -59,7 +62,7 @@ function main() {
     'Crockford vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'Crockford reference']
   );
-
+    
   performanceUI(
     document.querySelector('#long-strings')!,
     [
@@ -69,6 +72,20 @@ function main() {
     'Crockford vs JSON.parse, long strings',
     ['Native JSON.parse', 'Crockford reference']
   );
+
+  // conformanceUI(document.querySelector('#indexOf-long-strings-conform')!, parse_stringsIndexOf, 'Strings with <code>indexOf</code>');
+  performanceUI(
+    document.querySelector('#indexOf-long-strings-perform')!,
+    [
+      () => parse_native(jsonLongStrings),
+      () => parse_stringsIndexOf(jsonLongStrings),
+    ],
+    'Strings with <code>indexOf</code> vs JSON.parse, long strings',
+    ['Native JSON.parse', 'Strings with <code>indexOf</code>']
+  );
+
+
+
 
   performanceUI(
     document.querySelector('#short-strings')!,
@@ -126,7 +143,7 @@ function main() {
     document.querySelector('#long-strings-quicker')!,
     [
       () => parse_crockford(jsonLongStrings),
-      () => parse_longStringsQuicker(jsonLongStrings),
+      () => parse_stringsRegexpTest(jsonLongStrings),
     ],
     'Parse long JSON strings',
     ['Crockford', 'Strings with /.../y.test()']

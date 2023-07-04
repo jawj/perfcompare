@@ -87,11 +87,11 @@ code {
   color: #c30;
 }
 
-ul {
+.conform ul {
   padding-left: .5ex;
   margin: .5ex 0;
 }
-li {
+.conform li {
   margin: 0.25ex 0;
 }
 
