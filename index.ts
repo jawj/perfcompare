@@ -37,8 +37,8 @@ function main() {
       () => parse_native(jsonMixed),
       () => parsePerform_jsonBigint(jsonMixed),
     ],
-    'json-bigint vs JSON.parse, mixed JSON',
-    ['Native JSON.parse', 'json-bigint']
+    'json-bigint vs <code>JSON.parse</code>, mixed JSON',
+    ['Native <code>JSON.parse</code>', 'json-bigint']
   );
 
   conformanceUI(document.querySelector('#conform-lossless-json')!, parse_losslessJson, 'lossless-json');
@@ -48,8 +48,8 @@ function main() {
       () => parse_native(jsonMixed),
       () => parse_losslessJson(jsonMixed),
     ],
-    'lossless-json vs JSON.parse, mixed JSON',
-    ['Native JSON.parse', 'lossless-json']
+    'lossless-json vs <code>JSON.parse</code>, mixed JSON',
+    ['Native <code>JSON.parse</code>', 'lossless-json']
   );
 
   conformanceUI(document.querySelector('#conform-crockford')!, parse_crockford, 'Crockford');
@@ -59,8 +59,8 @@ function main() {
       () => parse_native(jsonMixed),
       () => parse_crockford(jsonMixed),
     ],
-    'Crockford vs JSON.parse, mixed JSON',
-    ['Native JSON.parse', 'Crockford reference']
+    'Crockford vs <code>JSON.parse</code>, mixed JSON',
+    ['Native <code>JSON.parse</code>', 'Crockford reference']
   );
     
   performanceUI(
@@ -69,8 +69,8 @@ function main() {
       () => parse_native(jsonLongStrings),
       () => parse_crockford(jsonLongStrings),
     ],
-    'Crockford vs JSON.parse, long strings',
-    ['Native JSON.parse', 'Crockford reference']
+    'Crockford vs <code>JSON.parse</code>, long strings',
+    ['Native <code>JSON.parse</code>', 'Crockford reference']
   );
 
   // conformanceUI(document.querySelector('#indexOf-long-strings-conform')!, parse_stringsIndexOf, 'Strings with <code>indexOf</code>');
@@ -80,11 +80,19 @@ function main() {
       () => parse_native(jsonLongStrings),
       () => parse_stringsIndexOf(jsonLongStrings),
     ],
-    'Strings with <code>indexOf</code> vs JSON.parse, long strings',
+    'Strings with <code>indexOf</code> vs <code>JSON.parse</code>, long strings',
     ['Native JSON.parse', 'Strings with <code>indexOf</code>']
   );
 
-
+  performanceUI(
+    document.querySelector('#regExpTest-long-strings-perform')!,
+    [
+      () => parse_native(jsonLongStrings),
+      () => parse_stringsRegexpTest(jsonLongStrings),
+    ],
+    'Strings with  <code>/.../y.test()</code> vs <code>JSON.parse</code>, long strings',
+    ['Crockford', 'Strings with <code>/.../y.test()</code>']
+  );
 
 
   performanceUI(
@@ -139,15 +147,7 @@ function main() {
 
 
 
-  performanceUI(
-    document.querySelector('#long-strings-quicker')!,
-    [
-      () => parse_crockford(jsonLongStrings),
-      () => parse_stringsRegexpTest(jsonLongStrings),
-    ],
-    'Parse long JSON strings',
-    ['Crockford', 'Strings with /.../y.test()']
-  );
+  
 
   conformanceUI(document.querySelector('#conform2')!, parse_jsonCustomNumbers, 'json-custom-numbers');
 

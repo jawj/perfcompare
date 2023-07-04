@@ -161,45 +161,75 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     On long strings, we start out between about 7× (Firefox) and 15× (Safari) slower than <code>JSON.parse</code>. Interestingly, the absolute performance is very similar across Chrome, Safari and Firefox, so the large headline differences between browsers are mainly driven by differences in the performance of their native <code>JSON.parse</code> implementations.
   </p>
+  <h4>Character-by-character</h4>
   <p>
-    Crockford's implementation parses string values the same way it parses all other values: character-by-character. When it finds a double quote, it terminates the loop and returns the result string. A backslash denotes an escape sequence, which is handled appropriately. Any other character is appended to a result string, and the loop continues.
-  </p>
-  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/17b72ba5040d2765868b5cef5978e5972c5282b6/implementations/03-crockford.js#L150" target="_blank">View the code</a></p>
-  <p>
-    You might think that it's building a string character-by-character that makes this slow, but in fact browsers have gotten pretty good at repeated string concatenation. We can tell that because <code>json-bigint</code> makes a simple tweak here to only count characters as it goes, and then append longer string slices, and it doesn't help that much. Iterating character-by-character in JavaScript just isn't very fast.
-  </p>
-  <p>
-    What alternative implementations might perform better? The key task is to search string starting from a specific index. The obvious tools JavaScript gives us here are <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf"><code>indexOf</code></a> and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExps</a>.
-  </p>
-  <h4><code>indexOf</code></h4>
-  <p>
-    If we stick with the same logic as Crockford, we can use <code>indexOf</code> like this:
+    Crockford's implementation parses string values the same way it parses all other values: character-by-character. The loop looks like this:
   </p>
   <ul>
-    <li>find the next double-quote with <code>indexOf</code></li>
-    <li>take a slice of the string up to that point</li>
-    <li>look for backslashes within the slice, using <code>indexOf</code> again</li>
+    <li>Get the next character, and check if it's a ...</li>
     <ul>
-      <li>if we find a backslash: take a sub-slice up to the backslash; append to the result string the sub-slice plus the result of the escape sequence it introduces; then keep going</li>
-      <li>if we don't find a backslash, job done: just append the slice to the result string, and return</li>
+      <li>Double quote? Return the result string, terminating the loop</li>
+      <li>Backslash? Unescape the escape sequence that follows and append it to the result string</li>
+      <li>Anything other character: append it to the result string and keep looping</li>
     </ul>
   </ul>
 
-  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/17b72ba5040d2765868b5cef5978e5972c5282b6/implementations/09-strings-indexOf.js#L150" target="_blank">View the code</a></p>
-  
+  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/17b72ba5040d2765868b5cef5978e5972c5282b6/implementations/03-crockford.js#L150" target="_blank">See the code</a></p>
+  <p>
+    You might think that it's building a string character-by-character that makes this slow, but in fact JavaScript engines have gotten pretty good at repeated string concatenation. We can tell that this is not the key problem, because <code>json-bigint</code> makes a simple tweak here to only count characters as it goes, appending longer string slices as required, and it doesn't help that much. Iterating character-by-character in JavaScript just isn't very fast.
+  </p>
+  <p>
+    What alternative implementations might perform better? The key task here is to search a string starting from a specific index. The obvious tools JavaScript gives us for this are <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf"><code>indexOf</code></a> and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExps</a>.
+  </p>
+  <h4><code>indexOf</code></h4>
+  <p>
+    If we stick with the same logic as Crockford, we can do string parsing in a loop like this:
+  </p>
+  <ul>
+    <li>Find the next double-quote with <code>indexOf</code>, and take a slice of the string up to that index</li>
+    <li>Look for backslashes within this slice, again using <code>indexOf</code></li>
+    <ul>
+      <li><b>Don't</b> find a backslash? Job done! Just append the slice to the result string, and return</li>
+      <li><b>Do</b> find a backslash? Take a sub-slice of the slice, up to the backslash; append the sub-slice to the result string; also append the result of the escape sequence introduced by the backslash; and keep going from after the escape sequence</li>
+    </ul>
+  </ul>
+
+  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/09-strings-indexOf.js#L97" target="_blank">See the code</a></p>
+
   <div id="indexOf-long-strings-perform"></div>
 
   <p>
-    In actual fact, this approach is many times faster on long strings even than native <code>JSON.parse</code>! But that's because it cheats, by ignoring all the things that aren't allowed to appear in a JSON string. For a conformant and performant implementation, that won't really cut it.
+    This approach is actually several times <b>faster</b> on long strings than native <code>JSON.parse</code>! But, of course, it cheats: it's ignoring all the things that aren't allowed to appear in a JSON string. And since we're looking for a <i>conformant</i> and performant implementation, that won't really cut it.
+  </p>
+
+  <h4>Sticky RegExps</h4>
+  <p>
+    So, how about using sticky RegExps instead? A sticky RegExp is one created with the <code>y</code> flag, and it has a <code>lastIndex</code> property. You can set <code>lastIndex</code> to the string index where you want RegExp matching to begin, and RegExp methods like <code>test</code> will subsequently set it to the index where a match ended.
   </p>
   <p>
+    Using the sticky RegExp <code>/[^"\\\u0000-\u001f]*/y</code> with the <code>test</code> method, we can parse strings in this sort of a loop:
+  </p>
+  <ul>
+    <li>Find the longest run with no quote, backslash, or illegal characters (codes 0 – 31, including <code>\t</code> and <code>\n</code>)
+    <li>Slice and append it to the result string</li>
+    <li>Check the next character to see if it's a ...</li>
+    <ul>
+      <li>Double-quote? Return the result string, terminating the loop</li>
+      <li>Backslash? Unescape and append the escape sequence that follows, then continue the loop</li>
+      <li>Anything else: throw a parsing error</li>
+    </ul>
+  </ul>
 
+  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/10-strings-regexp-test.js#L100" target="_blank">See the code</a></p>
+
+  <div id="regExpTest-long-strings-perform"></div>
+
+  <p>
+    Happy news: even when we catch illegal string characters, matching <code>JSON.parse</code>, we're still slightly faster on long strings than <code>JSON.parse</code> in Chrome and Firefox, and only a little slower in Safari.
   </p>
 
 
   <div id="short-strings"></div>
-
-
 
   <h1>json-custom-numbers</h1>
   <div id="conform-json-custom-numbers"></div>
@@ -207,7 +237,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
 
 
   <div id="long-strings"></div> (slower: Firefox 6.1x, Chome 7.2x, Safari 14.5x)
-  <div id="long-strings-quicker"></div>
+  
 
   <div id="conform2"></div>
   <div id="compare2"></div> (slower: Safari 1.6x, Chrome 1.7x, Firefox 2.2x)

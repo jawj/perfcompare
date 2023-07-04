@@ -13,7 +13,7 @@ export const parse = (function () {
   var at;     // The index of the current character
   var ch;     // The current character
 
-  const stringChunkRegExp = /[^"\\\n\t\u0000-\u001f]*/y;
+  const stringChunkRegExp = /[^"\\\u0000-\u001f]*/y;
 
   var escapee = {
     "\"": "\"",
