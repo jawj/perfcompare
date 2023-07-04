@@ -11,7 +11,7 @@
     I used JSON in my first production Postgres database, which sat behind the back-end API for my research app <i>Mappiness</i>. The app could send back any data it liked as JSON. From that JSON document, the API picked out a few fields it needed, storing and indexing them as ordinary columns. That done, it shoved the whole JSON object into its own column, preserving everything else for me to retrieve and analyse later.
   </p>
   <p>
-    Back then, in 2010, the JSON data just went into the database as `text`. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then.
+    Back then, in 2010, the JSON data just went into the database as <code>text</code>. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then.
   </p>
   <p>
     You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
@@ -22,79 +22,78 @@
     But there's a problem when we use JSON to communicate values between Postgres and JavaScript.
   </p>
   <p>
-    JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 `float64`</a>. Postgres, of course, has many kinds. Some of these, like `bigint` or `numeric`, can represent larger and/or more precise numbers than a `float64`.
+    JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 <code>float64</code></a>. Postgres, of course, has many kinds. Some of these, like <code>bigint</code> or <code>numeric</code>, can represent larger and/or more precise numbers than a <code>float64</code>.
   </p>
   <p>
     JavaScript Postgres drivers typically parse these values into strings. For example:
   </p>
-  <pre>
-    await { rows } = pool.query('SELECT (1e16 + 1)::bigint AS big');
-    // -> [{ big: '10000000000000001' }]
-  </pre>
+
+  <pre>await { rows } = pool.query('SELECT (1e16 + 1)::bigint AS big');
+// -> [{ big: '10000000000000001' }]</pre>
   <p>
-    This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres `bigint` value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt">`BigInt()`</a>.
+    This leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres <code>bigint</code> value to <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt"><code>BigInt()</code></a>.
   </p>
   <p>
-    Now: what if Postgres were to return that same `bigint` to JavaScript as a JSON value? <a href="https://www.json.org/json-en.html">The JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them. So the JSON number value gets parsed with JavaScript's `JSON.parse` and, if it's bigger than JavaScript's `Number.MAX_SAFE_INTEGER`, bad things happen.
-  </p>
-  <pre>
-    await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
-    // -> [{ big: 10000000000000000 }]
-  </pre>
-  <p>
-    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent. Imagine this was the `id` value of a table row. Well, now it's the `id` of a different table row.
+    Now: what if Postgres were to return that same <code>bigint</code> to JavaScript as a JSON value? <a href="https://www.json.org/json-en.html">The JSON spec</a> allows arbitrarily large numbers — much larger than JavaScript can handle — and Postgres goes right ahead and encodes them.
   </p>
   <p>
-    [Sinister music plays]
+    So the JSON number value gets parsed with JavaScript's <code>JSON.parse</code> and, if it's bigger than JavaScript's <code>Number.MAX_SAFE_INTEGER</code>, bad things happen.
+  </p>
+  <pre>await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
+// -> [{ big: 10000000000000000 }]</pre>
+  <p>
+    Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent.
+  </p>
+  <p>
+    Imagine this was the <code>id</code> value of a table row. Well, now it's the <code>id</code> of a different table row. [Sinister music plays].
   </p>
 
   <h2>The solution: custom JSON parsing</h2>
   <p>
     The solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both node-postgres and @neondatabase/serverless, you do that like so:
   </p>
-  <pre>
-    import { types } from '@neondatabase/serverless';  // or from 'pg'
-    function myJSONParse(json) { /* ... implementation ... */ }
-    types.setTypeParser(types.builtins.JSONB, myJSONParse);
-  </pre>
+  <pre>import { types } from '@neondatabase/serverless';  // or from 'pg'
+
+function myJSONParse(json) { /* implementation */ }
+types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
-    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the `reviver` argument to native `JSON.parse`</a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript `float64`, and the damage is done).
+    (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the <code>reviver</code> argument to native <code>JSON.parse</code></a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply here sees a number, it's already been parsed to a JavaScript <code>float64</code>, and the damage is done).
   </p>
   <p>
     As I see it, there are three key things we're going to want from a custom JSON parser:
   </p>
   <ol>
     <li>
-      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for `JSON.parse`. That means the same API and, critically, the same result for every input. 
+      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for <code>JSON.parse</code>. That means the same API and, critically, the same result for every input.
     </li>
     <li>
-      Second, performance: it's unlikely ever to match the optimised C++ of native `JSON.parse`, but it should be the fastest gosh-darn JavaScript implementation we can come up with. In certain contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, energy and money.
+      Second, performance: it's unlikely ever to match the optimised C++ of native <code>JSON.parse</code>, but it should be the fastest gosh-darn JavaScript implementation we can come up with. In certain contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, energy and money.
     </li>
     <li>
       And third, flexibility: when it comes across a large number (or indeed any number) in the JSON input, it should give us the chance to deal with it however we want.
     </li>
   </ol>
   <p>
-    So: we're looking for a conformant, performant JSON parser that can deal flexibly with large numbers. Searching npm turns up two candidate packages: `json-bigint` and `lossless-json`. Are they up to the job?
+    So: we're looking for a conformant, performant JSON parser that can deal flexibly with large numbers. Searching npm turns up two candidate packages: <a href="https://www.npmjs.com/package/json-bigint"><code>json-bigint</code></a> and <a href="https://www.npmjs.com/package/lossless-json"><code>lossless-json</code></a>. Are they up to the job?
   </p>
 
   <h2>Conformance and performance testing</h2>
   <p>
-    Behaving the same way as `JSON.parse` means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
+    Behaving the same way as <code>JSON.parse</code> means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
   </p>
   <p>
-    Assessing performance against `JSON.parse` will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to compare parsing of all the different kinds of JSON values.
+    Assessing performance against <code>JSON.parse</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to compare parsing of all the different kinds of JSON values.
   </p>
-    So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); and strings full of backslash escapes (like `\u03B1` and `\n`); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and `true`, `false` and `null`. These values are combined as objects or arrays, so that we capture speed on those container types too.
-  </p>
-  <p>
-    For the headline comparison, all of these types are combined into a single large object: `{ "longStrings": ..., "shortStrings": ..., ... }`.
+  So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); and strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. These values are combined as objects or arrays, so that we capture speed on those container types too.
   </p>
   <p>
-    The final piece of the puzzle is how to run the performance tests. Performance benchmarking JS code seems to have gone way out of fashion in recent years. jsperf.com has long gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about `performance.now()`.
+    For the headline comparison, all of these types are combined into a single large object: <code>{ "longStrings": ..., "shortStrings": ..., ... }</code>.
   </p>
   <p>
-    I've thus put together our own simple head-to-head performance function. It checks `performance.now()` timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are meaningfully different.
+    The final piece of the puzzle is how to run the performance tests. Performance benchmarking JS code seems to have gone way out of fashion in recent years. jsperf.com has long gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about <code>performance.now()</code>.
+  </p>
+  <p>
+    I've thus put together our own simple head-to-head performance function. It checks <code>performance.now()</code> timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are meaningfully different.
   </p>
 
   <h3>json-bigint</h3>
@@ -102,10 +101,10 @@
   <div id="conform-json-bigint"></div>
   <div id="compare-json-bigint"></div>
   <p>
-    For conformance, the summary is that json-bigint parses all valid documents correctly, but it's significantly more lax in what it accepts than `JSON.parse`. It permits numbers in various illegal formats (such as `.1`, `1.`, `01`), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts as whitespace.
+    For conformance, the summary is that json-bigint parses all valid documents correctly, but it's significantly more lax in what it accepts than <code>JSON.parse</code>. It permits numbers in various illegal formats (such as <code>.1</code>, <code>1.</code>, <code>01</code>), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts as whitespace.
   </p>
   <p>
-    For performance, the headline number is that it's 6 – 8× slower than `JSON.parse` on my mixed JSON test document, depending on the browser and therefore JavaScript engine.
+    For performance, the headline number is that it's 6 – 8× slower than <code>JSON.parse</code> on my mixed JSON test document, depending on the browser and therefore JavaScript engine.
   </p>
   <p>
     On flexibility, json-bigint offers various options, but not the one I really want, which is simply to allow me to supply a custom number parsing function.
@@ -116,20 +115,84 @@
   <div id="conform-lossless-json"></div>
   <div id="compare-lossless-json"></div>
   <p>
-    Conformance-wise, the big item for lossless-json is that it throws errors on duplicate objects keys. It calls this a feature, and to be fair I guess it's inline with its "lossless" approach, but it's also a major incompatbility with `JSON.parse`.  It's also just slightly more relaxed than `JSON.parse` on number formats, allowing a leading decimal point with no zero (`.1`).
+    Conformance-wise, the big item for lossless-json is that it throws errors on duplicate objects keys. It calls this a feature, and to be fair I guess it's inline with its "lossless" approach, but it's also a major incompatbility with <code>JSON.parse</code>. It's also just slightly more relaxed than <code>JSON.parse</code> on number formats, allowing a leading decimal point with no zero (<code>.1</code>).
   </p>
   <p>
-    Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 5 – 7× slower than `JSON.parse`.
+    Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 5 – 7× slower than <code>JSON.parse</code>.
   </p>
   <p>
     lossless-json scores points on flexibility too by taking a custom number parsing function as one of its options.
   </p>
 
-  
+  <h2>Can we do better</h2>
+  <p>
+    Overall, neither package quite matches the behaviour of <code>JSON.parse</code>, and neither seems blisteringly quick. So: can we do better?
+  </p>
+  <p>
+    Yes, we can. We can, of course, choose to fully match <code>JSON.parse</code> behaviour, and to provide for custom number parsing. Less obviously, we can also improve performance by a factor of 3 – 4 over these libraries, which gets us to only around 2× slower than <code>JSON.parse</code>.
+  </p>
+  <p>
+    The npm package <code>json-custom-numbers</code> contains our conformant, performant, flexible custom JSON parser. If you want to know how we made it faster, read on.
+  </p>
 
-  <h1>Crockford reference</h1>
+  <h2>Crockford reference implementation</h2>
+
+  <p>
+    We'll take as our starting point Douglas Crockford's, clear, concise, public domain <a href="https://github.com/douglascrockford/JSON-js/blob/03157639c7a7cddd2e9f032537f346f1a87c0f6d/json_parse.js">JSON reference implementation</a>.
+  </p>
+
   <div id="conform-crockford"></div>
-  <div id="compare-crockford"></div> (slower: Chrome 8.4x, Safari 6.8x, Firefox 9.3x)
+  <div id="compare-crockford"></div>
+
+  <p>
+    Perhaps unsurprisingly for a reference implementation, this one isn't very quick: it's 7 – 9× slower than <code>JSON.parse</code>. Perhaps more surprisingly, it also doesn't follow Crockford's own <a href="https://www.json.org/json-en.html">JSON spec</a> very closely. In fact, it has all the same relaxed attitudes to numbers, strings and whitespace as <code>json-bigint</code> (which is based on it), plus it throws on duplicate keys like <code>lossless-json</code> does.
+  </p>
+  <p>
+    We have some work to do.
+  </p>
+
+  <h3>Strings</h3>
+  <p>
+    Let's begin with JSON-encoded strings. How do we benchmark against <code>JSON.parse</code> on long strings?
+  </p>
+
+  <div id="long-strings"></div>
+
+  <p>
+    On long strings, we start out between about 7× (Firefox) and 15× (Safari) slower than <code>JSON.parse</code>. Interestingly, the absolute performance is very similar across Chrome, Safari and Firefox, so the large headline differences between browsers are mainly driven by differences in the performance of their native <code>JSON.parse</code> implementations.
+  </p>
+  <div id="original-strings"></div>
+  <p>
+    Crockford's implementation parses string values the same way it parses all other values: character-by-character. When it finds a double quote, it terminates the loop and returns the result string. A backslash denotes an escape sequence, which is handled appropriately. Any other character is appended to a result string, and the loop continues.
+  </p>
+  <p>
+    You might think that it's building a string character-by-character that makes this slow, but in fact browsers have gotten pretty good at repeated string concatenation. We can tell that because <code>json-bigint</code> makes a simple tweak here to only count characters as it goes, and then append longer string slices, and it doesn't help that much. Iterating character-by-character in JavaScript just isn't very fast.
+  </p>
+  <p>
+    What alternative implementations might perform better? The key task is to search string starting from a specific index. The obvious tools JavaScript gives us here are <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf"><code>indexOf</code></a> and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExps</a>. We can hope that these will be optimized C++ code, and significantly faster than a JavaScript loop.
+  <p>
+    If we were to stick with the same logic as Crockford, we could:
+  <ul>
+    <li>use <code>indexOf</code> to find the next double-quote</li>
+    <li>take a slice of the string up to that point</li>
+    <li>use <code>indexOf</code> again to look for backslashes within the slice</li>
+    <ul>
+      <li>if we find a backslash: take a sub-slice up to the backslash; append to the result string the sub-slice plus the result of the escape sequence it introduces; then keep going</li>
+      <li>if we don't find a backslash, job done: just append the slice to the result string, and return</li>
+    </ul>
+  </ul>
+  </p>
+  <p>
+    In actual fact, this approach is many times faster on long strings even than native <code>JSON.parse</code>! But that's because it cheats, by ignoring all the things that aren't allowed to appear in a JSON string. For a conformant and performant implementation, that won't really cut it.
+  </p>
+  <p>
+
+  </p>
+
+
+  <div id="short-strings"></div>
+
+
 
   <h1>json-custom-numbers</h1>
   <div id="conform-json-custom-numbers"></div>

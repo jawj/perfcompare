@@ -60,7 +60,7 @@ export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string
             SVGDataURI = 'data:image/svg+xml,' + encodeURIComponent(xml);
             nameB += ': ' + (
               p! >= 0.01 ? 'no significant difference' :
-                speedCompare(medians as [number, number])
+                `<b>${speedCompare(medians as [number, number])}</b>`
             ) + ` (<a href="https://en.wikipedia.org/wiki/Mann%E2%80%93Whitney_U_test"><i>U</i></a> = ${u}, p ${p! < 0.001 ? '< 0.001' : '= ' + p!.toPrecision(2)})`;
             m.redraw();
           });

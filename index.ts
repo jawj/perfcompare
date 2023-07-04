@@ -1,3 +1,5 @@
+import m from 'mithril';
+
 import { conformanceUI } from './ui/conformance';
 import { performanceUI } from './ui/performance';
 
@@ -17,23 +19,14 @@ import longStrings from './json-docs/long-strings-array.json';
 import shortNumbers from './json-docs/short-numbers-array.json';
 import shortStrings from './json-docs/short-strings-object.json';
 import stringEscapes from './json-docs/string-escapes.json';
+import { collapsible } from './ui/collapsible';
 
 
 const jsonLongStrings = JSON.stringify(longStrings);
+const jsonShortStrings = JSON.stringify(shortStrings);
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
 
 function main() {
-  conformanceUI(document.querySelector('#conform-crockford')!, parse_crockford, 'Crockford');
-  performanceUI(
-    document.querySelector('#compare-crockford')!,
-    [
-      () => parse_native(jsonMixed),
-      () => parse_crockford(jsonMixed),
-    ],
-    'Crockford vs JSON.parse, mixed JSON',
-    ['Native JSON.parse', 'Crockford reference']
-  );
-
   conformanceUI(document.querySelector('#conform-json-bigint')!, parseConform_jsonBigint, 'json-bigint');
   performanceUI(
     document.querySelector('#compare-json-bigint')!,
@@ -56,6 +49,65 @@ function main() {
     ['Native JSON.parse', 'lossless-json']
   );
 
+  conformanceUI(document.querySelector('#conform-crockford')!, parse_crockford, 'Crockford');
+  performanceUI(
+    document.querySelector('#compare-crockford')!,
+    [
+      () => parse_native(jsonMixed),
+      () => parse_crockford(jsonMixed),
+    ],
+    'Crockford vs JSON.parse, mixed JSON',
+    ['Native JSON.parse', 'Crockford reference']
+  );
+
+  performanceUI(
+    document.querySelector('#long-strings')!,
+    [
+      () => parse_native(jsonLongStrings),
+      () => parse_crockford(jsonLongStrings),
+    ],
+    'Crockford vs JSON.parse, long strings',
+    ['Native JSON.parse', 'Crockford reference']
+  );
+
+  performanceUI(
+    document.querySelector('#short-strings')!,
+    [
+      () => parse_native(jsonShortStrings),
+      () => parse_crockford(jsonShortStrings),
+    ],
+    'Crockford vs JSON.parse, short strings',
+    ['Native JSON.parse', 'Crockford reference']
+  );
+
+  m.render(document.querySelector('#original-strings')!, collapsible(m('div', 'See the code'), m('pre', 
+`while (next()) {
+  if (ch === "\"") {
+    next();
+    return value;
+  }
+  if (ch === "\\") {
+    next();
+    if (ch === "u") {
+      uffff = 0;
+      for (i = 0; i < 4; i += 1) {
+        hex = parseInt(next(), 16);
+        if (!isFinite(hex)) {
+          break;
+        }
+        uffff = uffff * 16 + hex;
+      }
+      value += String.fromCharCode(uffff);
+    } else if (typeof escapee[ch] === "string") {
+      value += escapee[ch];
+    } else {
+      break;
+    }
+  } else {
+    value += ch;
+  }
+}`)));
+
   conformanceUI(document.querySelector('#conform-json-custom-numbers')!, parse_jsonCustomNumbers, 'json-custom-numbers');
   performanceUI(
     document.querySelector('#compare-json-custom-numbers')!,
@@ -68,15 +120,7 @@ function main() {
   );
 
 
-  performanceUI(
-    document.querySelector('#long-strings')!,
-    [
-      () => parse_native(jsonLongStrings),
-      () => parse_crockford(jsonLongStrings),
-    ],
-    'Parse long JSON strings',
-    ['Native JSON.parse', 'Crockford reference']
-  );
+
 
   performanceUI(
     document.querySelector('#long-strings-quicker')!,
