@@ -14,7 +14,7 @@
     Back then, in 2010, the JSON data just went into the database as <code>text</code>. But it wasn't long before Postgres added a native JSON type (with version 9.2 in 2012), and its JSON support has become steadily more powerful since then.
   </p>
   <p>
-    You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library, Zapatos, uses Postgres JSON functions to <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">build handy nested structures out of lateral joins</a>.
+    You can now use Postgres not just to store JSON, but to transform and return complex query results. For example, my TypeScript/Postgres library Zapatos uses Postgres JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to build handy nested structures out of lateral joins</a>.
   </p>
 
   <h2>Trouble with numbers</h2>
@@ -45,7 +45,7 @@
     Compare the two results above. That's right: without any warning, the number we got out of the second query is not the same number Postgres sent.
   </p>
   <p>
-    Imagine this was the <code>id</code> value of a table row. Well, now it's the <code>id</code> of a different table row. [Sinister music plays].
+    Imagine this was the <code>id</code> value of a table row. Well, now it's the <code>id</code> of a different table row. <i>[Sinister music plays].</i>
   </p>
 
   <h2>The solution: custom JSON parsing</h2>
@@ -82,29 +82,29 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     Behaving the same way as <code>JSON.parse</code> means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
   </p>
   <p>
-    Assessing performance against <code>JSON.parse</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to compare parsing of all the different kinds of JSON values.
+    Assessing performance against <code>JSON.parse</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we'll want to benchmark the parsing of a wide range of JSON values.
   </p>
-  So, I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); and strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. These values are combined as objects or arrays, so that we capture speed on those container types too.
-  </p>
-  <p>
-    For the headline comparison, all of these types are combined into a single large object: <code>{ "longStrings": ..., "shortStrings": ..., ... }</code>.
+    I've gone for: long strings (such as a blog post or product description); short strings (such as object keys); strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as a high-resolution latitude or longitude); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. Then I've combined these values into objects and arrays, so that we capture speed on the two container types too.
   </p>
   <p>
-    The final piece of the puzzle is how to run the performance tests. Performance benchmarking JS code seems to have gone way out of fashion in recent years. jsperf.com has long gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about <code>performance.now()</code>.
+    For a headline comparison, I've then combined all these types into a single large object: <code>{ "longStrings": ..., "shortStrings": ..., ... }</code>.
   </p>
   <p>
-    I've thus put together our own simple head-to-head performance function. It checks <code>performance.now()</code> timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram comparing operations/second, and runs a non-parametric stats test (Mann-Whitney U) to establish whether the distributions are meaningfully different.
+    The final piece of the puzzle is: how to run the performance tests? Performance benchmarking JavaScript seems to have gone way out of fashion in recent years. jsperf.com has long since gone the way of the Dodo. <a href="https://github.com/bestiejs/benchmark.js">benchmark.js</a> (which powered it) hasn't had a commit in five years, and consequently doesn't even know about <code>performance.now()</code>.
+  </p>
+  <p>
+    I've therefore put together a simple head-to-head performance function of my own. It checks <code>performance.now()</code> timer resolution, estimates how many iterations <i>N</i> of the provided functions are needed to get an accurate reading, and then runs 50 trials of <i>N</i> iterations each. Finally it plots a simple histogram to compare operations/second, and runs a non-parametric stats test (the Mann-Whitney U) to establish whether the two distributions are meaningfully different.
   </p>
 
   <h3>json-bigint</h3>
-  <p>First up: json-bigint. The widgets below should tell the story.</p>
+  <p>First up: json-bigint. The widgets below tell the full story.</p>
   <div id="conform-json-bigint"></div>
   <div id="compare-json-bigint"></div>
   <p>
-    For conformance, the summary is that json-bigint parses all valid documents correctly, but it's significantly more lax in what it accepts than <code>JSON.parse</code>. It permits numbers in various illegal formats (such as <code>.1</code>, <code>1.</code>, <code>01</code>), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts as whitespace.
+    For conformance, the summary is that json-bigint parses all valid documents correctly, but it's significantly more lax in what else it accepts than <code>JSON.parse</code>. It permits numbers in various illegal formats (such as <code>.1</code>, <code>1.</code>, <code>01</code>), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts as whitespace.
   </p>
   <p>
-    For performance, the headline number is that it's 6 – 8× slower than <code>JSON.parse</code> on my mixed JSON test document, depending on the browser and therefore JavaScript engine.
+    For performance, the headline number is that it's 6 – 8× slower than <code>JSON.parse</code> on my mixed JSON test document, depending on the browser and JavaScript engine.
   </p>
   <p>
     On flexibility, json-bigint offers various options, but not the one I really want, which is simply to allow me to supply a custom number parsing function.
@@ -115,7 +115,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <div id="conform-lossless-json"></div>
   <div id="compare-lossless-json"></div>
   <p>
-    Conformance-wise, the big item for lossless-json is that it throws errors on duplicate objects keys. It calls this a feature, and to be fair I guess it's inline with its "lossless" approach, but it's also a major incompatbility with <code>JSON.parse</code>. It's also just slightly more relaxed than <code>JSON.parse</code> on number formats, allowing a leading decimal point with no zero (<code>.1</code>).
+    Conformance-wise, the big thing for lossless-json is that it throws errors on duplicate object keys. It calls this a feature and, to be fair, it's fully in line with its "lossless" branding. But it's also a major incompatibility with <code>JSON.parse</code>. The package is also a touch more relaxed than <code>JSON.parse</code> on number formats, allowing a leading decimal point with no zero (<code>.1</code>).
   </p>
   <p>
     Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 5 – 7× slower than <code>JSON.parse</code>.
@@ -124,21 +124,23 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     lossless-json scores points on flexibility too by taking a custom number parsing function as one of its options.
   </p>
 
-  <h2>Can we do better</h2>
+  <h2>Can we do better?</h2>
   <p>
-    Overall, neither package quite matches the behaviour of <code>JSON.parse</code>, and neither seems blisteringly quick. So: can we do better?
+    Overall, neither package quite matches the behaviour of <code>JSON.parse</code>, and neither seems blisteringly quick. Can we do better? Yes, we can.
   </p>
   <p>
-    Yes, we can. We can, of course, choose to fully match <code>JSON.parse</code> behaviour, and to provide for custom number parsing. Less obviously, we can also improve performance by a factor of 3 – 4 over these libraries, which gets us to only around 2× slower than <code>JSON.parse</code>.
+    We can, of course, choose to fully match <code>JSON.parse</code> behaviour, and to provide for custom number parsing.</p>
+  <p>
+    Less obviously, we can also improve performance by a factor of 3 – 4 over these libraries, which gets us to only around 2× slower than <code>JSON.parse</code>.
   </p>
   <p>
-    The npm package <code>json-custom-numbers</code> contains our conformant, performant, flexible custom JSON parser. If you want to know how we made it faster, read on.
+    The npm package <a href="https://www.npmjs.com/package/json-custom-numbers">json-custom-numbers</a> contains our conformant, performant, flexible custom JSON parser. If you want to know how these speed gains were achieved, read on.
   </p>
 
-  <h2>Crockford reference implementation</h2>
+  <h2>Crockford</h2>
 
   <p>
-    We'll take as our starting point Douglas Crockford's, clear, concise, public domain <a href="https://github.com/douglascrockford/JSON-js/blob/03157639c7a7cddd2e9f032537f346f1a87c0f6d/json_parse.js">JSON reference implementation</a>.
+    As a starting point, I took Douglas Crockford's, clear, concise, public domain <a href="https://github.com/douglascrockford/JSON-js/blob/03157639c7a7cddd2e9f032537f346f1a87c0f6d/json_parse.js">JSON reference implementation</a>. How does it measure up?
   </p>
 
   <div id="conform-crockford"></div>
@@ -147,95 +149,212 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     Perhaps unsurprisingly for a reference implementation, this one isn't very quick: it's 7 – 9× slower than <code>JSON.parse</code>.
   </p>
-  <p>Perhaps more surprisingly, it also doesn't follow Crockford's own <a href="https://www.json.org/json-en.html">JSON spec</a> very closely. In fact, it has all the same relaxed attitudes to numbers, strings and whitespace as <code>json-bigint</code> (which is based on it), plus it throws on duplicate keys like <code>lossless-json</code> does.
+  <p>Perhaps more surprisingly, it also doesn't follow Crockford's own <a href="https://www.json.org/json-en.html">JSON spec</a> very closely. It has all the same relaxed attitudes to numbers, strings and whitespace as <code>json-bigint</code> (that's no surprise: json-bigint is also based on it). Plus it throws on duplicate keys the same way <code>lossless-json</code> does.
   </p>
   <p>
     We have some work to do.
   </p>
 
-  <h3>Strings</h3>
+  <h3>Optimisations</h3>
   <p>
-    Let's begin with JSON-encoded strings. How does the Crockford implementation benchmark against <code>JSON.parse</code> on long strings?
+    Exactly what's fastest in any particular case depends on what different JavaScript engines are doing behind-the-scenes. But there are two very general principles we can follow:
+  </p>
+  <ul>
+    <li>Do as little work as possible, especially in loops.</li>
+    <li>Lean as heavily as possible on native methods, which are likely in optimised C++.</li>
+  </ul>
+  <p>
+    And of course we can do various other things manually that an optimising compiler might or might not do for us, such as inlining functions and unrolling loops.
+  </p>
+
+  <h4>Sticky RegExps</h4>
+  <p>
+    The Crockford implementation picks through the whole JSON input, character-by-character, using <code>charAt</code>. Some key speed gains come from using sticky RegExps for everything except array and object parsing.
+  </p>
+  <p class="info">
+    A <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExp</a> is one created with the <code>y</code> flag. It has a <code>lastIndex</code> property. You can set <code>lastIndex</code> to the string index where you want RegExp matching to begin. RegExp methods like <code>test</code> will then set <code>lastIndex</code> to the index where a match ended.
+  </p>
+  <ul>
+    <li>
+      Following a string-opening <code>"</code>, chunks of the JSON input string that can be sliced and appended straight to the output can be identified by the <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/test"><code>test</code></a> method on <code>/[^"\\\u0000-\u001f]*/y</code>.
+    </li>
+    <li>
+      Any time the remaining JSON input doesn't start with <code>"</code>, <code>[</code> or <code>{</code>, we can pass it to the <code>test</code> method on <code>/-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][-+]?[0-9]+)?|true|false|null/y</code>. Handily, all we need from this is a match length: we can use the first character, which we already know, to figure out what kind of value we matched.
+    </li>
+  </ul>
+
+  <h4>Character codes</h4>
+  <p>
+    As already mentioned, the Crockford implementation deals in single-character strings, calling <code>charAt()</code> at every input string index. Switching this to integer character <i>codes</i> with <code>charCodeAt</code> makes interestingly little difference to V8 (Chrome, Node.js), but appreciably speeds things up for JavaScriptCore (Safari, Bun).
+  </p>
+
+  <h4>Function inlining</h4>
+  <p>
+    Next up, there are two short functions that the Crockford implementation calls <b>a lot</b>:
+  </p>
+  <ul>
+    <li><code>next()</code>, which (optionally) checks the current character is what we think it should be, advances the input string index, and gets the next character.</li>
+    <li><code>white()</code>, which just keeps calling <code>next()</code> until it's consumed all the whitespace between values.</li>
+  </ul>
+  <p>
+    Having factored the character check out of <code>next()</code>, it was possible to replace these two functions with a single line of code everywhere they were previously called.
+  </p>
+  <ul>
+    <li><code>next()</code> becomes <code>text.charCodeAt(at++)</code>.</li>
+    <li><code>white()</code> becomes <code>while (ch < 33 && (ch === 32 || ch === 10 || ch === 13 || ch === 9)) ch = text.charCodeAt(at++)</code>.</li>
+  </ul>
+  <p>
+    Crockford's <code>white()</code> was pretty lax, as discussed earlier. That's because it checked only for <code>ch <= " "</code>.
+  </p> 
+  <p>
+    Checking for each of the four legal whitespace characters, to match <code>JSON.parse</code>, initially slowed things down. But many JSON documents contain no whitespace between tokens. And for those documents, the original performance is fully restored by adding back the logically redundant less-than check <code>ch < 33</code>, short-circuiting the other four.
+  </p>
+  <p>
+    Note that the order of the other four conditions is also significant: space <code>ch === 32</code> comes first, being the most likely to be encountered, which reduces the number of comparisons to be made on average.
+  </p>
+
+  <h4>Loop unrolling</h4>
+  <p>
+    Crockford's implementation deals with string escapes like this:
+  </p> 
+  <pre>var escapee = { "\"": "\"", "\\": "\\", "/": "/", b: "\b", f: "\f", n: "\n", r: "\r", t: "\t" };
+// ...
+
+if (ch === "u") {
+  uffff = 0;
+  for (i = 0; i < 4; i += 1) {
+    hex = parseInt(next(), 16);
+    if (!isFinite(hex)) break;
+    uffff = uffff * 16 + hex;
+  }
+  str += String.fromCharCode(uffff);
+
+} else if (typeof escapee[ch] === "string") {
+  str += escapee[ch];
+}</pre>
+  <p>
+    There are several opportunities to speed this up.
+  </p>
+  <p>
+    Since we already made <code>ch</code> a character code, we can use that as an array index. That means both the <code>escapee[ch]</code> object lookup for ordinary escapes and the <code>parseInt()</code> call for Unicode hex digits can be replaced with faster array lookups.
+  </p>
+  <p>
+    Then we can unroll the Unicode loop, and switch multiplications to bit-shifts:
+  </p>
+  <pre>hex = hexLookup[text.charCodeAt(at++)];
+uffff = (uffff << 4) + hex;
+hex = hexLookup[text.charCodeAt(at++)];
+uffff = (uffff << 4) + hex;
+hex = hexLookup[text.charCodeAt(at++)];
+uffff = (uffff << 4) + hex;
+hex = hexLookup[text.charCodeAt(at++)];
+uffff = (uffff << 4) + hex;</pre>
+  <p>
+    Having done that, it becomes evident that we could pre-calculate the bit-shifted values by using four separate lookup arrays. So <code>hexLookup1</code> tells you the value contributed by each possible each character code in the first position, <code>hexLookup2</code> has values for the second position, and so on.
+  </p>
+  <p>
+    For instance, <code>'A'.charCodeAt(0) === 65</code> and <code>'a'.charCodeAt(0) === 97</code>, so <code>hexLookup1[65] === hexLookup1[97] === 0xA << 12 === 40960</code>.
+  </p>
+  <p>
+    Lastly, in order to catch invalid hex digits, we add <code>1</code> to each lookup value. That means we can treat <code>0</code> and <code>undefined</code> hex lookups as errors. The final logic then looks like this:
+  </p>
+  <pre>const escapes = ["", "", /* ... */ "\t"];
+const hexLookup1 = [0, 0, /* .. */ 61441];
+const hexLookup2 = [0, 0, /* ... */ 3841];
+const hexLookup3 = [0, 0, /* ... */ 241];
+const hexLookup4 = [0, 0, /* ... */ 16];
+function badUnicode() { error("Invalid \\uXXXX escape in string"); }
+// ...
+
+ch = text.charCodeAt(at++);
+str += ch === 117 /* u */ ?
+  String.fromCharCode(
+    (hexLookup1[text.charCodeAt(at++)] || badUnicode()) +
+    (hexLookup2[text.charCodeAt(at++)] || badUnicode()) +
+    (hexLookup3[text.charCodeAt(at++)] || badUnicode()) +
+    (hexLookup4[text.charCodeAt(at++)] || badUnicode()) - 4
+  ) :
+  escapes[ch] ||
+  error("Invalid escape sequence in string");</pre>
+
+
+
+
+  <p>
+    Let's begin with JSON-encoded strings. How does the Crockford implementation benchmark on long ones?
   </p>
 
   <div id="long-strings"></div>
 
   <p>
-    On long strings, we start out between about 7× (Firefox) and 15× (Safari) slower than <code>JSON.parse</code>. Interestingly, the absolute performance (operations/second) seems very similar across Chrome, Safari and Firefox, so the large differences in the multiple between browsers are mainly driven by differences in the performance of their native <code>JSON.parse</code> implementations.
+    On long strings, we start out between about 7× (Firefox) and 15× (Safari) slower than <code>JSON.parse</code>. Interestingly, the absolute performance (operations/second) is pretty similar across Chrome, Safari and Firefox, so the large differences in the multiple between browsers are mainly driven by differences in performance of the native <code>JSON.parse</code> implementations.
   </p>
-  <h4>Character-by-character</h4>
   <p>
-    Crockford's implementation parses string values the same way it parses all other values: character-by-character. The loop looks like this:
+    <a href="https://github.com/jawj/perfcompare/blob/17b72ba5040d2765868b5cef5978e5972c5282b6/implementations/03-crockford.js#L150" target="_blank">Crockford's implementation</a> parses string values the same way it parses all other values: character-by-character.
   </p>
-  <ul>
-    <li>Get the next character, and check if it's a ...</li>
-    <ul>
-      <li>Double quote? Return the result string, terminating the loop</li>
-      <li>Backslash? Unescape the escape sequence that follows and append it to the result string</li>
-      <li>Anything other character: append it to the result string and keep looping</li>
-    </ul>
-  </ul>
+  <p>
+    What alternative implementations might perform better? The main part of the work here is to search a string starting from a specific index. The obvious tools JavaScript gives us for this are <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf"><code>indexOf</code></a> (which can take a starting index) and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExps</a>.
+  </p>
 
-  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/17b72ba5040d2765868b5cef5978e5972c5282b6/implementations/03-crockford.js#L150" target="_blank">See the code</a></p>
-  <p>
-    You might think that it's building a string character-by-character that makes this slow, but in fact JavaScript engines have gotten pretty good at repeated string concatenation. We can tell that this is not the key problem, because <code>json-bigint</code> makes a simple tweak here to only count characters as it goes, appending longer string slices as required, and it doesn't help that much. Iterating character-by-character in JavaScript just isn't very fast.
-  </p>
-  <p>
-    What alternative implementations might perform better? The key task here is to search a string starting from a specific index. The obvious tools JavaScript gives us for this are <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/indexOf"><code>indexOf</code></a> and <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/sticky">sticky RegExps</a>.
-  </p>
+
   <h4><code>indexOf</code></h4>
   <p>
-    If we stick with the same logic as Crockford, we can do string parsing in a loop like this:
+    <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/09-strings-indexOf.js#L97" target="_blank">We can use <code>indexOf</code> to accelerate</a> Crockford's string-parsing approach. First, we use it to look for the next double quote. Then, we take a slice of the string to that index, and use <code>indexOf</code> again to look for backslashes.
   </p>
-  <ul>
-    <li>Find the next double-quote with <code>indexOf</code>, and take a slice of the string up to that index</li>
-    <li>Look for backslashes within this slice, again using <code>indexOf</code></li>
-    <ul>
-      <li><b>Don't</b> find a backslash? Job done! Just append the slice to the result string, and return</li>
-      <li><b>Do</b> find a backslash? Take a sub-slice of the slice, up to the backslash; append the sub-slice to the result string; also append the result of the escape sequence introduced by the backslash; and keep going from after the escape sequence</li>
-    </ul>
-  </ul>
-
-  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/09-strings-indexOf.js#L97" target="_blank">See the code</a></p>
-
   <div id="indexOf-long-strings-perform"></div>
-
   <p>
-    This approach is actually several times <b>faster</b> on long strings than native <code>JSON.parse</code>! But, of course, it cheats: it's ignoring all the things that aren't allowed to appear in a JSON string. And since we're looking for a <i>conformant</i> and performant implementation, that won't really cut it.
+    This approach is actually <b>several times faster</b> than native <code>JSON.parse</code>! But, of course, it cheats: it's ignoring all the things that aren't allowed to appear in a JSON string. And since we're looking for a <i>conformant</i> and performant implementation, that won't cut it.
   </p>
 
   <h4>Sticky RegExps</h4>
   <p>
-    So, how about using sticky RegExps instead? A sticky RegExp is one created with the <code>y</code> flag, and it has a <code>lastIndex</code> property. You can set <code>lastIndex</code> to the string index where you want RegExp matching to begin, and RegExp methods like <code>test</code> will subsequently set it to the index where a match ended.
+    It's not so easy to make a conformant implementation with <code>indexOf</code>, so let's turn to sticky RegExps instead.
   </p>
   <p>
-    Using the sticky RegExp <code>/[^"\\\u0000-\u001f]*/y</code> with the <code>test</code> method, we can parse strings in this sort of a loop:
+    <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/10-strings-regexp-test.js#L100" target="_blank">We can parse JSON strings using the RegExp <code>test</code> method and a sticky RegExp</a> representing all legal and non-special JSON string characters: <code>/[^"\\\u0000-\u001f]*/y</code>.
   </p>
-  <ul>
-    <li>Find the longest run with no quote, backslash, or illegal characters (codes 0 – 31, including <code>\t</code> and <code>\n</code>)
-    <li>Slice and append it to the result string</li>
-    <li>Check the next character to see if it's a ...</li>
-    <ul>
-      <li>Double-quote? Return the result string, terminating the loop</li>
-      <li>Backslash? Unescape and append the escape sequence that follows, then continue the loop</li>
-      <li>Anything else: throw a parsing error</li>
-    </ul>
-  </ul>
-
-  <p>&raquo; <a href="https://github.com/jawj/perfcompare/blob/3cdb7d3a99d3411f855b115be5219c2aae1135fa/implementations/10-strings-regexp-test.js#L100" target="_blank">See the code</a></p>
-
   <div id="regExpTest-long-strings-perform"></div>
-
   <p>
-    Happy news: even when we catch illegal string characters, matching <code>JSON.parse</code>, we're still slightly faster on long strings than <code>JSON.parse</code> in Chrome and Firefox, and only a little slower in Safari.
+    Good news: this implementation is still slightly faster on long strings than <code>JSON.parse</code> in Chrome and Firefox, and only a little slower than <code>JSON.parse</code> in Safari. And on short strings?
+  </p>
+  <div id="regExpTest-short-strings-perform"></div>
+  <p>
+    It's still a fair bit slower than <code>JSON.parse</code> on short strings. But some of this is down to the object parsing happening around those short strings, and we'll do some more work on that later.
   </p>
 
+  <h3>Escaped strings</h3>
+  <p>
+    What about strings that have a lot of backslash-escapes?
+  </p>
+  <div id="original-escaped-strings-perform"></div>
+  <p>
+    These are pretty slow (5 – 8× native). How is Crockford parsing these?
+  </p>
+  <pre>var escapee = { "\"": "\"" /* ... */ };
+// ...
+if (ch === "u") {
+  uffff = 0;
+  for (i = 0; i < 4; i += 1) {
+    hex = parseInt(next(), 16);
+    if (!isFinite(hex)) break;
+    uffff = uffff * 16 + hex;
+  }
+  value += String.fromCharCode(uffff);
+} else if (typeof escapee[ch] === "string") {
+  value += escapee[ch];
+} else {
+  break;
+}</pre>
 
-  <div id="short-strings"></div>
+
 
   <h1>json-custom-numbers</h1>
   <div id="conform-json-custom-numbers"></div>
   <div id="compare-json-custom-numbers"></div> (slower: Chrome 2.0x, Safari 1.7x, Firefox 1.7x)
+
+  <h1>json-custom-numbers-local</h1>
+  <div id="conform-json-custom-numbers-local"></div>
+  <div id="compare-json-custom-numbers-local"></div>
 
 
   <div id="long-strings"></div> (slower: Firefox 6.1x, Chome 7.2x, Safari 14.5x)

@@ -14,7 +14,7 @@ import { parse as parse_losslessJson } from './implementations/05-lossless-json'
 import { parse as parse_crockford } from './implementations/03-crockford';
 import { parse as parse_stringsIndexOf } from './implementations/09-strings-indexOf';
 import { parse as parse_stringsRegexpTest } from './implementations/10-strings-regexp-test';
-
+import { parse as parse_jcnLocal } from './implementations/100-json-custom-numbers';
 
 import boolNull from './json-docs/bool-null-array.json';
 import longNumbers from './json-docs/long-numbers-array.json';
@@ -27,6 +27,7 @@ import stringEscapes from './json-docs/string-escapes.json';
 
 const jsonLongStrings = JSON.stringify(longStrings);
 const jsonShortStrings = JSON.stringify(shortStrings);
+const jsonStringEscapes = JSON.stringify(stringEscapes);
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
 
 function main() {
@@ -80,8 +81,8 @@ function main() {
       () => parse_native(jsonLongStrings),
       () => parse_stringsIndexOf(jsonLongStrings),
     ],
-    'Strings with <code>indexOf</code> vs <code>JSON.parse</code>, long strings',
-    ['Native JSON.parse', 'Strings with <code>indexOf</code>']
+    '<code>indexOf</code> vs <code>JSON.parse</code>, long strings',
+    ['Native <code>JSON.parse</code>', 'Strings with <code>indexOf</code>']
   );
 
   performanceUI(
@@ -90,48 +91,33 @@ function main() {
       () => parse_native(jsonLongStrings),
       () => parse_stringsRegexpTest(jsonLongStrings),
     ],
-    'Strings with  <code>/.../y.test()</code> vs <code>JSON.parse</code>, long strings',
-    ['Crockford', 'Strings with <code>/.../y.test()</code>']
+    ' <code>/.../y.test()</code> vs <code>JSON.parse</code>, long strings',
+    ['Native <code>JSON.parse</code>', 'Strings with <code>/.../y.test()</code>']
   );
-
 
   performanceUI(
-    document.querySelector('#short-strings')!,
+    document.querySelector('#regExpTest-short-strings-perform')!,
     [
       () => parse_native(jsonShortStrings),
-      () => parse_crockford(jsonShortStrings),
+      () => parse_stringsRegexpTest(jsonShortStrings),
     ],
-    'Crockford vs JSON.parse, short strings',
-    ['Native JSON.parse', 'Crockford reference']
+    '<code>/.../y.test()</code> vs <code>JSON.parse</code>, short strings',
+    ['Native <code>JSON.parse</code>', 'Strings with <code>/.../y.test()</code>']
   );
 
-  m.render(document.querySelector('#original-strings')!, collapsible(m('div', 'See the code'), m('pre', 
-`while (next()) {
-  if (ch === "\"") {
-    next();
-    return value;
-  }
-  if (ch === "\\") {
-    next();
-    if (ch === "u") {
-      uffff = 0;
-      for (i = 0; i < 4; i += 1) {
-        hex = parseInt(next(), 16);
-        if (!isFinite(hex)) {
-          break;
-        }
-        uffff = uffff * 16 + hex;
-      }
-      value += String.fromCharCode(uffff);
-    } else if (typeof escapee[ch] === "string") {
-      value += escapee[ch];
-    } else {
-      break;
-    }
-  } else {
-    value += ch;
-  }
-}`)));
+  performanceUI(
+    document.querySelector('#original-escaped-strings-perform')!,
+    [
+      () => parse_native(jsonStringEscapes),
+      () => parse_stringsRegexpTest(jsonStringEscapes),
+    ],
+    '<code>/.../y.test()</code> vs <code>JSON.parse</code>, escaped strings',
+    ['Native <code>JSON.parse</code>', 'Strings with <code>/.../y.test()</code>']
+  );
+
+
+  
+
 
   conformanceUI(document.querySelector('#conform-json-custom-numbers')!, parse_jsonCustomNumbers, 'json-custom-numbers');
   performanceUI(
@@ -142,6 +128,17 @@ function main() {
     ],
     'json-custom-numbers vs JSON.parse, mixed JSON',
     ['Native JSON.parse', 'json-custom-numbers']
+  );
+
+  conformanceUI(document.querySelector('#conform-json-custom-numbers-local')!, parse_jcnLocal, 'json-custom-numbers local');
+  performanceUI(
+    document.querySelector('#compare-json-custom-numbers-local')!,
+    [
+      () => parse_jsonCustomNumbers(jsonMixed),
+      () => parse_jcnLocal(jsonMixed),
+    ],
+    'json-custom-numbers vs local version, mixed JSON',
+    ['json-custom-numbers', 'local version'],
   );
 
 

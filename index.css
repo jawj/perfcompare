@@ -14,12 +14,33 @@ pre, code {
 }
 
 pre {
-  padding: .5ex 1ex .5ex 3ex;
+  padding: .5ex 1ex .5ex 2ex;
 }
 
-code {
+/* code {
   display: inline-block;
   padding: 0 .25ex;
+} */
+
+.info {
+  border-radius: 5px;
+  border: 1px solid #08e;
+  background: #eef;
+  padding: 1ex 2ex 1ex 5ex;
+  position: relative;
+}
+.info::before {
+  content: 'i';
+  color: #fff;
+  font-weight: bold;
+  position: absolute;
+  left: 1ex;
+  width: 2.5ex;
+  height: 2.5ex;
+  text-align: center;
+  display: block;
+  background: #08e;
+  border-radius: 100px;
 }
 
 .conform .conform-title, .compare .compare-title {
