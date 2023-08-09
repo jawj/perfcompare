@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "serve": "serve -p 8008 --no-clipboard",
-    "watch": "esbuild index.ts --bundle --keep-names --format=iife --target=es2022 --platform=neutral --minify --line-limit=80 --watch --outdir=.",
+    "serve": "serve dist -p 8008 --no-clipboard",
+    "watch": "esbuild index.ts --bundle --keep-names --format=iife --target=es2022 --platform=neutral --minify --line-limit=80 --watch --outdir=dist",
     "start": "npm-run-all --parallel --race watch serve"
   },
   "author": "",
