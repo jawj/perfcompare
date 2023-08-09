@@ -15,6 +15,12 @@ pre, code {
 
 pre {
   padding: .5ex 1ex .5ex 2ex;
+  white-space: pre-wrap;
+}
+
+li {
+  margin-top: 1ex;
+  margin-bottom: 1ex;
 }
 
 /* code {
@@ -56,6 +62,25 @@ pre {
 .conform .title, .compare .title {
   font-weight: bold;
   margin: 0 0 5px;
+}
+.conform button {
+  margin: 10px 0 3px;
+}
+.conform:after {
+  content: '+';
+  position: absolute;
+  bottom: -18px;
+  font-size: 24px;
+  font-weight: bold;
+  color: #fff;
+  background: #999;
+  border-radius: 100px;
+  line-height: .888;
+  width: 24px;
+  height: 24px;
+  text-align: center;
+  left: 50%;
+  margin-left: -12px;
 }
 
 .compare {

@@ -1,10 +1,15 @@
 import { base64Decode } from './base64';
 import testsJson from './testsJson.json';
+import { stringify } from 'json-custom-numbers';
 
 type TestKey = keyof typeof testsJson;
 
 const textDec = new TextDecoder();
 for (const key in testsJson) testsJson[key as TestKey] = textDec.decode(base64Decode(testsJson[key as TestKey]));
+
+const depth = 5e4;
+// @ts-ignore
+testsJson.y_very_deep = '['.repeat(depth) + ']'.repeat(depth);
 
 export { testsJson };
 
@@ -20,12 +25,12 @@ export function testParse(parse: (json: string) => any, json: string) {
   catch (err) { testErr = err; }
 
   if (!!testErr !== !!trueErr) {
-    const description = `JSON.parse ${trueErr ? 'error' : 'OK'}, custom function ${testErr ? 'error' : 'OK'}`;
+    const description = `JSON.parse ${trueErr ? 'throws error' : 'parses'}, custom function ${testErr ? 'throws error' : 'parses'}`;
     return { description, error: trueErr ? (trueErr as Error).message : (testErr as Error).message };
   }
 
-  const trueResultJson = JSON.stringify(trueResult)
-  const testResultJson = JSON.stringify(testResult);
+  const trueResultJson = stringify(trueResult, undefined, undefined, undefined, depth);
+  const testResultJson = stringify(testResult, undefined, undefined, undefined, depth);
   if (trueResultJson !== testResultJson) {
     const description = 'Parse result mismatch';
     return { description, expected: trueResultJson, actual: testResultJson };
@@ -52,17 +57,17 @@ export function testParseAll(parse: (json: string) => any) {
     const prefix = key.match(/^[^_]+/)![0];  // y, n, i, number, object, string
 
     switch (prefix) {
-      case 'y':
-        if (result.error) validJSONUnexpectedErrors.push(details);
-        else validJSONDifferentResults.push(details);
-        break;
-
       case 'n':
         invalidJSONUnexpectedSuccesses.push(details);
         break;
 
-      default:
+      case 'i':
         indeterminateJSONDifferentOutcomes.push(details);
+        break;
+
+      default:
+        if (result.error) validJSONUnexpectedErrors.push(details);
+        else validJSONDifferentResults.push(details);
     }
   }
 

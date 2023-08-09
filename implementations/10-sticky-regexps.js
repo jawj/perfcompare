@@ -8,6 +8,9 @@
 var at;     // The index of the current character
 var ch;     // The current character
 
+var stringChunkRegExp = /[^"\\\u0000-\u001f]*/y;
+var wordRegExp = /-?(0|[1-9][0-9]*)([.][0-9]+)?([eE][-+]?[0-9]+)?|true|false|null/y;
+
 var escapee = {
   "\"": "\"",
   "\\": "\\",
@@ -49,89 +52,51 @@ var next = function (c) {
   return ch;
 };
 
-var number = function () {
+function string() {  // note: it's on you to check that ch == '"'.charCodeAt() before you call this
+  let str = "";
 
-  // Parse a number value.
-
-  var value;
-  var string = "";
-
-  if (ch === "-") {
-    string = "-";
-    next("-");
-  }
-  while (ch >= "0" && ch <= "9") {
-    string += ch;
-    next();
-  }
-  if (ch === ".") {
-    string += ".";
-    while (next() && ch >= "0" && ch <= "9") {
-      string += ch;
-    }
-  }
-  if (ch === "e" || ch === "E") {
-    string += ch;
-    next();
-    if (ch === "-" || ch === "+") {
-      string += ch;
-      next();
-    }
-    while (ch >= "0" && ch <= "9") {
-      string += ch;
-      next();
-    }
-  }
-  value = +string;
-  if (!isFinite(value)) {
-    error("Bad number");
-  } else {
-    return value;
-  }
-};
-
-function string() {
-  let value = '';
   for (; ;) {
-    const nextQuote = text.indexOf('"', at);
-    if (nextQuote === -1) error("Unterminated string");
+    stringChunkRegExp.lastIndex = at;  // find next chunk without \ or " or invalid chars
+    stringChunkRegExp.test(text);
 
-    if (nextQuote === at) { // empty string: we're done
-      at = nextQuote + 1;
-      ch = text.charAt(at++);
-      return value;
+    var { lastIndex } = stringChunkRegExp;
+    if (lastIndex > at) {
+      str += text.slice(at, lastIndex);
+      at = lastIndex;
     }
 
-    let chunk = text.slice(at, nextQuote);
-    const nextBackslash = chunk.indexOf("\\");
-    if (nextBackslash === -1) {  // no backslashes up to end quote: we're done
-      value += chunk;
-      at = nextQuote + 1;
-      ch = text.charAt(at++);
-      return value;
+    next();  // what comes after it?
+    switch (ch) {
+      case '"':  // end of string
+        next();
+        return str;
 
-    } else {  // deal with backslash escapes
-      chunk = chunk.slice(0, nextBackslash);
-      value += chunk;
-      at += nextBackslash + 1;
-      ch = text.charAt(at++);
+      case '\\':  // backslash escape
+        next();
+        if (ch === "u") {
+          let uffff = 0;
+          for (let i = 0; i < 4; i += 1) {
+            var hex = parseInt(next(), 16);
+            if (!isFinite(hex)) {
+              error("Invalid \\uXXXX escape sequence in string");
+            }
+            uffff = uffff * 16 + hex;
+          }
+          str += String.fromCharCode(uffff);
 
-      const escape = escapee[ch];
-      if (escape) {
-        value += escape;
+        } else if (typeof escapee[ch] === "string") {
+          str += escapee[ch];
 
-      } else if (ch === "u") {
-        let uffff = 0;
-        for (let i = 0; i < 4; i += 1) {
-          const hex = parseInt(ch = text.charAt(at++), 16);
-          if (!isFinite(hex)) error("Bad unicode escape in string");
-          uffff = uffff * 16 + hex;
+        } else {
+          error("Invalid escape sequence in string");
         }
-        value += String.fromCharCode(uffff);
+        break;
 
-      } else {
-        error("Bad escape sequence in string: '\\" + ch + "'")
-      }
+      case "":
+        error("Unterminated string");
+
+      default:
+        error("Invalid escape sequence in string");
     }
   }
 };
@@ -146,31 +111,24 @@ var white = function () {
 };
 
 var word = function () {
+  let val;
 
-  // true, false, or null.
+  var startAt = at - 1;  // the first digit/letter was already consumed, so go back 1
+  wordRegExp.lastIndex = startAt;
+  wordRegExp.test(text) || error("Unexpected character or end of input");
 
-  switch (ch) {
-    case "t":
-      next("t");
-      next("r");
-      next("u");
-      next("e");
-      return true;
-    case "f":
-      next("f");
-      next("a");
-      next("l");
-      next("s");
-      next("e");
-      return false;
-    case "n":
-      next("n");
-      next("u");
-      next("l");
-      next("l");
-      return null;
+  var { lastIndex } = wordRegExp;
+  if (ch < 'f') {  // it's a number
+    var string = text.slice(startAt, lastIndex);
+    val = +string;
+
+  } else {  // must be null/true/false
+    val = ch === 'n' ? null : ch === 't';
   }
-  error("Unexpected '" + ch + "'");
+
+  at = lastIndex;
+  next();
+  return val;
 };
 
 var value;  // Place holder for the value function.
@@ -217,6 +175,7 @@ var object = function () {
       return obj;   // empty object
     }
     while (ch) {
+      if (ch !== '"') error('Expected " to start object key');
       key = string();
       white();
       next(":");
@@ -249,12 +208,8 @@ value = function () {
       return array();
     case "\"":
       return string();
-    case "-":
-      return number();
     default:
-      return (ch >= "0" && ch <= "9")
-        ? number()
-        : word();
+      return word();
   }
 };
 

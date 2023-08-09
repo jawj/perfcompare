@@ -12,9 +12,9 @@ log(`Resolution: ${usRes}\u03bcs`);
 const trialDuration = Math.max(msRes * 100, 10);
 log(`Target trial duration: ${trialDuration}ms`);
 
-const trials = 50;
+const trials = 100;
 
-function opsPerDurationMs(fn: () => any, durationMs: number, toNearest = 10, multiplier = 5, maxOps = 2e9) {
+function opsPerDurationMs(fn: () => any, durationMs: number, toNearest = 10, multiplier = 10, maxOps = 2e9) {
   const t0 = performance.now();
   const targetMs = durationMs * multiplier;
   for (let i = 1; i < maxOps; i++) {  // it's important for various reasons that i starts at 1, not 0

@@ -5,8 +5,8 @@ import { compare } from '../compare';
 
 function speedCompare([a, b]: [number, number]) {
   return b > a ?
-    (b / a).toFixed(1) + '\u00d7 faster' :
-    (a / b).toFixed(1) + '\u00d7 slower';
+    (b / a).toFixed(2) + '\u00d7 faster' :
+    (a / b).toFixed(2) + '\u00d7 slower';
 }
 
 export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[], colors = ['#e30', '#03e']) {
