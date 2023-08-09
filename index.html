@@ -1,4 +1,10 @@
-<link rel="stylesheet" href="index.css">
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Parsing Postgres JSON in JavaScript</title>
+  <link rel="stylesheet" href="index.css">
+</head>
 
 <body>
   <h1>Parsing Postgres JSON in JavaScript</h1>
@@ -102,7 +108,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     Assessing performance against <code>JSON.parse()</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to benchmark the parsing of a wide range of JSON values.
   </p>
-    Here, I've plumped for: long strings (such as a blog post or a product description); short strings (such as object keys); strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as high-resolution latitudes and longitudes); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. I've combined these values into objects and arrays, so that we also capture speed on the two JSON container types.
+  Here, I've plumped for: long strings (such as a blog post or a product description); short strings (such as object keys); strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as high-resolution latitudes and longitudes); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. I've combined these values into objects and arrays, so that we also capture speed on the two JSON container types.
   </p>
   <p>
     For a headline comparison, I've then brought all these types together into one large object: <code>{ "longStrings": ..., "shortStrings": ..., ... }</code>.
@@ -243,8 +249,7 @@ types.setTypeParser(types.builtins.JSONB, parseWithBigInt);</pre>
     This issue reared its head when I was trying to optimise <code>\uXXXX</code> (Unicode) escape parsing code. In Safari, every approach I could think of benchmarked worse than what I'd started with, which was essentially the Crockford reference implementation. I was surprised by this.
   </p>
   <p>
-    I eventually resorted to benchmarking Crockford against Crockford — and found that one copy of an identical implementation was significantly slower than the other (<i>p</i> < 0.001). I then realised that my parsing conformance tests involve lots of invalid JSON input, throwing repeated errors in every possible location.
-  </p>
+    I eventually resorted to benchmarking Crockford against Crockford — and found that one copy of an identical implementation was significantly slower than the other (<i>p</i> &lt; 0.001). I then realised that my parsing conformance tests involve lots of invalid JSON input, throwing repeated errors in every possible location.</p>
   <p>
     Being exposed to the tests therefore appears to reduce the performance of any particular parsing code. Skipping the prior conformance check (or running it on a different copy of the same code) could turn 20% slower into 10% faster when I then tested performance differences.
   </p>
@@ -284,5 +289,7 @@ types.setTypeParser(types.builtins.JSONB, parseWithBigInt);</pre>
   <p>
     Anyway, for json-custom-numbers I decided to keep my non-recursive <code>stringify</code> implementation, but also to provide a <code>maxDepth</code> option for both <code>stringify</code> and <code>parse</code>. For <code>stringify</code>, <code>maxDepth</code> defaults to 50,000 — a bit higher than you get in Safari and Bun — but can be set to anything up to <code>Infinity</code>. For <code>parse</code>, it defaults to <code>Infinity</code>, which matches the native implementations and means you can go as deep as available memory allows.
   </p>
+  <script src="index.js"></script>
 </body>
-<script src="index.js"></script>
+
+</html>
