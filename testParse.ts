@@ -1,6 +1,8 @@
 import { base64Decode } from './base64';
-import testsJson from './testsJson.json';
 import { stringify } from 'json-custom-numbers';
+
+// JSON test docs
+import testsJson from './testsJson.json';
 
 type TestKey = keyof typeof testsJson;
 
@@ -12,6 +14,7 @@ const depth = 5e4;
 testsJson.y_very_deep = '['.repeat(depth) + ']'.repeat(depth);
 
 export { testsJson };
+
 
 export function testParse(parse: (json: string) => any, json: string) {
   let trueErr = undefined;
