@@ -84,7 +84,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   </p>
   <ol>
     <li>
-      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for <code>JSON.parse()</code>. That means the same API and, critically, the same result for every input.
+      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for <code>JSON.parse()</code>. That means the same API and, critically, the same result for every input (aside from the numbers it handles better).
     </li>
     <li>
       Second, performance: it's never going to match the optimised C++ of native <code>JSON.parse()</code>, but it should be the fastest gosh-darn JavaScript implementation we can come up with. In some common contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, electricity and money.
