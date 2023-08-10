@@ -67,7 +67,7 @@
   <h2>The solution: custom JSON parsing</h2>
 
   <p>
-    A solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both node-postgres and @neondatabase/serverless, that looks like this:
+    A solution to this nastiness is to get hold of a custom JSON parser that can handle big numbers, and to tell your Postgres driver to use it. For both <a href="https://node-postgres.com/">node-postgres</a> and <a href="https://www.npmjs.com/package/@neondatabase/serverless">@neondatabase/serverless</a>, that looks like this:
   </p>
 
   <pre>import { types } from '@neondatabase/serverless';  // or from 'pg'
