@@ -134,7 +134,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     json-bigint is then significantly more lax in what else it accepts than <code>JSON.parse()</code>. It permits numbers in various illegal formats (such as <code>.1</code>, <code>1.</code>, <code>01</code>), isn't bothered by unescaped newlines or invalid Unicode escapes in strings, and allows all sorts (character codes 0 – 32) as whitespace.
   </p>
   <p>
-    For performance, the headline number is that it's 6 – 10× slower than <code>JSON.parse()</code> on my mixed JSON test document, depending on the browser and wind direction.
+    For performance, the headline number is that it's 6 – 11× slower than <code>JSON.parse()</code> on my mixed JSON test document, depending on the browser and wind direction.
   </p>
   <p>
     Regarding flexibility, json-bigint offers various options, but not the one I really want, which is simply to allow me to supply a custom number-parsing function.
@@ -154,7 +154,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     Like json-bigint, and for the same reason, lossless-json fails on deeply nested structures. Elsewhere, it's not as lax as json-bigint, but it's still a touch more relaxed than <code>JSON.parse()</code> on number formats, allowing a leading decimal point with no zero (<code>.1</code>).
   </p>
   <p>
-    Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 4.5 – 7× slower than <code>JSON.parse</code>.
+    Regarding performance, lossless-json does a bit better than json-bigint, with a headline factor of 4 – 7× slower than <code>JSON.parse</code>.
   </p>
   <p>
     Finally, lossless-json scores points on flexibility by taking a custom number-parsing function as one of its options.
@@ -187,25 +187,24 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     Today's take-home message is: if you need custom parsing of numbers in JSON, use <a href="https://www.npmjs.com/package/json-custom-numbers">json-custom-numbers</a>. It's a perfect match for the behaviour of native <code>JSON.parse()</code>, and it's usually only 1.5 – 3× slower, which is substantially quicker than the alternatives.
   </p>
-  <p>Speed varies according to JavaScript engine and what you're parsing, so there are some <a href="https://github.com/jawj/json-custom-numbers#parse">more detailed comparisons in the project README</a>.</p>
+  <p>Speed varies according to the JavaScript engine and what you're parsing, so there are some <a href="https://github.com/jawj/json-custom-numbers#parse">more detailed comparisons in the project README</a>.</p>
   <p>
     To use json-custom-numbers with Neon's serverless driver (or node-postgres) to parse Postgres <code>bigint</code> values as JavaScript <code>BigInt</code> values, do this:
   </p>
-  <pre>import { types } from '@neondatabase/serverless';  // or from 'pg'
+  <pre>import { types, neon } from '@neondatabase/serverless';  // or from 'pg'
 import { parse } from 'json-custom-numbers';
 
-function numberParser(str) {
-  const n = +str;
-  const safe = n >= Number.MIN_SAFE_INTEGER && n <= Number.MAX_SAFE_INTEGER;
-  return safe || /[.eE]/.test(str) ? n : BigInt(str);
+// this leaves most values as ordinary numbers, using BigInt for large integers only
+function parseJSONWithBigInts(str) {
+  return parse(str, undefined, function (str) {
+    const n = +str;
+    const safe = n >= Number.MIN_SAFE_INTEGER && n <= Number.MAX_SAFE_INTEGER;
+    return safe || /[.eE]/.test(str) ? n : BigInt(str);
+  });
 }
 
-function parseWithBigInt(str, reviver, indent) {
-  return parse(str, reviver, indent, numberParser);
-}
-
-types.setTypeParser(types.builtins.JSON, parseWithBigInt);
-types.setTypeParser(types.builtins.JSONB, parseWithBigInt);</pre>
+types.setTypeParser(types.builtins.JSON, parseJSONWithBigInts);
+types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
 
   <p>
     This is a fine place to stop reading. Carry on if you'd like me to point out a few things I learned in the process of writing and optimising the library.
