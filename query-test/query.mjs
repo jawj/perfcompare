@@ -1,4 +1,4 @@
-import { types, neon } from '@neondatabase/serverless';  // or from 'pg'
+import { types } from '@neondatabase/serverless';  // or from 'pg'
 import { parse } from 'json-custom-numbers';
 
 // this leaves most values as ordinary numbers, using BigInt for large integers only
@@ -13,6 +13,8 @@ function parseJSONWithBigInts(str) {
 types.setTypeParser(types.builtins.JSON, parseJSONWithBigInts);
 types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);
 
+
+import { neon } from '@neondatabase/serverless';  // or from 'pg'
 
 const sql = neon(process.env.DATABASE_URL);
 

@@ -191,7 +191,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     To use json-custom-numbers with Neon's serverless driver (or node-postgres) to parse Postgres <code>bigint</code> values as JavaScript <code>BigInt</code> values, do this:
   </p>
-  <pre>import { types, neon } from '@neondatabase/serverless';  // or from 'pg'
+  <pre>import { types } from '@neondatabase/serverless';  // or from 'pg'
 import { parse } from 'json-custom-numbers';
 
 // this leaves most values as ordinary numbers, using BigInt for large integers only
