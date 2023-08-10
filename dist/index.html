@@ -23,13 +23,13 @@
     Back then, in 2010, the JSON data just went into the database as <code>text</code>. But it wasn't long before Postgres got a native JSON type (<a href="https://paquier.xyz/postgresql-2/postgres-9-2-highlight-json-data-type/">with version 9.2</a> in 2012). <a href="https://www.postgresql.org/docs/current/datatype-json.html">Its JSON support</a> has become steadily more powerful since then.
   </p>
   <p>
-    You can now use Postgres not just to store and retrieve JSON, but also to build it, transform it, and return complex query results with it. For example, my own TypeScript/Postgres library uses Postgres JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to build handy nested structures out of lateral joins</a>.
+    You can now use Postgres not just to store and retrieve JSON, but also to build it, transform it, and query it. For example, my own TypeScript/Postgres library uses Postgres's JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to create and return handy nested structures out of lateral joins</a>. This all represents a valuable <a href="https://news.ycombinator.com/item?id=28406334">hybrid of relational and 'NoSQL' database capabilities</a>.
   </p>
 
   <h2>Trouble with numbers</h2>
 
   <p>
-    But there's a potential problem when we use JSON to communicate values between Postgres and JavaScript.
+    JSON has its origins in JavaScript, of course. But there's a potential problem when we use JSON to communicate between Postgres and JavaScript.
   </p>
   <p>
     JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 <code>float64</code></a>. Postgres, of course, has many kinds. Some of these, like <code>bigint</code> or <code>numeric</code>, can represent larger and/or more precise numbers than a <code>float64</code>.
@@ -108,7 +108,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <p>
     Assessing performance against <code>JSON.parse()</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to benchmark the parsing of a wide range of JSON values.
   </p>
-  Here, I've plumped for: long strings (such as a blog post or a product description); short strings (such as object keys); strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as high-resolution latitudes and longitudes); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. I've combined these values into objects and arrays, so that we also capture speed on the two JSON container types.
+    Here, I've plumped for: long strings (such as a blog post or a product description); short strings (such as object keys); strings full of backslash escapes (like <code>\u03B1</code> and <code>\n</code>); long numbers (such as high-resolution latitudes and longitudes); short numbers (such as an id or count); and <code>true</code>, <code>false</code> and <code>null</code>. I've combined these values into objects and arrays, so that we also capture speed on the two JSON container types.
   </p>
   <p>
     For a headline comparison, I've then brought all these types together into one large object: <code>{ "longStrings": ..., "shortStrings": ..., ... }</code>.
