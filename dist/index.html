@@ -23,7 +23,7 @@
     Back then, in 2010, the JSON data just went into the database as <code>text</code>. But it wasn't long before Postgres got a native JSON type (<a href="https://paquier.xyz/postgresql-2/postgres-9-2-highlight-json-data-type/">with version 9.2</a> in 2012). <a href="https://www.postgresql.org/docs/current/datatype-json.html">Its JSON support</a> has become steadily more powerful since then.
   </p>
   <p>
-    You can now use Postgres not just to store and retrieve JSON, but also to build it, transform it, and query it. For example, my own TypeScript/Postgres library uses Postgres's JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to create and return handy nested structures out of lateral joins</a>. This all represents a valuable <a href="https://news.ycombinator.com/item?id=28406334">hybrid of relational and 'NoSQL' database capabilities</a>.
+    You can now use Postgres not just to store and retrieve JSON, but also to build, transform, index and query it. My own TypeScript/Postgres library uses Postgres's JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to create and return handy nested structures out of lateral joins</a>. This all represents a valuable <a href="https://news.ycombinator.com/item?id=28406334">hybrid of relational and 'NoSQL' database capabilities</a>.
   </p>
 
   <h2>Trouble with numbers</h2>
@@ -185,16 +185,15 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <div id="compare-json-custom-numbers"></div>
 
   <p>
-    Today's take-home message is: if you need custom parsing of numbers in JSON, use <a href="https://www.npmjs.com/package/json-custom-numbers">json-custom-numbers</a>. It's a perfect match for the behaviour of native <code>JSON.parse()</code>, and it's usually only 1.5 – 3× slower, which is substantially quicker than the alternatives.
+    Today's take-home message is: if you need custom parsing of numbers in JSON, use <a href="https://www.npmjs.com/package/json-custom-numbers">json-custom-numbers</a>. It is (I believe) a perfect match for the behaviour of native <code>JSON.parse()</code>, and it's usually only 1.5 – 3× slower, which is substantially quicker than the alternatives.
   </p>
   <p>Speed varies according to the JavaScript engine and what you're parsing, so there are some <a href="https://github.com/jawj/json-custom-numbers#parse">more detailed comparisons in the project README</a>.</p>
   <p>
-    To use json-custom-numbers with Neon's serverless driver (or node-postgres) to parse Postgres <code>bigint</code> values as JavaScript <code>BigInt</code> values, do this:
+    To use json-custom-numbers with Neon's serverless driver (or node-postgres) to parse Postgres <code>bigint</code> values as JavaScript <code>BigInt</code> values, you can do this:
   </p>
   <pre>import { types } from '@neondatabase/serverless';  // or from 'pg'
 import { parse } from 'json-custom-numbers';
 
-// this leaves most values as ordinary numbers, using BigInt for large integers only
 function parseJSONWithBigInts(str) {
   return parse(str, undefined, function (str) {
     const n = +str;
@@ -205,7 +204,9 @@ function parseJSONWithBigInts(str) {
 
 types.setTypeParser(types.builtins.JSON, parseJSONWithBigInts);
 types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
-
+  <p>
+    This code sample uses <code>BigInt</code> only for integers that don't fit in an ordinary number value. That means a Postgres <code>bigint</code> value can end up as either an ordinary number or a <code>BigInt</code>, depending on its size. For sanity, you'll probably want to ensure that anything that <i>might</i> be a <code>BigInt</code> is treated as one, by subsequently manually converting it: <code>BigInt(bigintValueFromPostgres)</code>.
+  </p>
   <p>
     This is a fine place to stop reading. Carry on if you'd like me to point out a few things I learned in the process of writing and optimising the library.
   </p>
