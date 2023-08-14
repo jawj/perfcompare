@@ -269,7 +269,7 @@ types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
     I thought I'd finished the package, I'd already written most of this post, and I was in the middle of claiming that the json-custom-numbers parser perfectly matches native <code>JSON.parse()</code> behaviour. A caveat the occurred to me, and duly wrote a section about how my implementation was recursive, meaning that really-unusually-deeply-nested JSON structures would overflow the call stack.
   </p>
   <p>
-    Seeing it written down, and attempting to justify it, this then seemed kind of lame. If you can see the problem, why not fix it? So I went back and rewrote the parser as <a href="https://github.com/jawj/json-custom-numbers/blob/main/src/parse.ts">a nice big state machine</a> instead.
+    Seeing it written down, and attempting to justify it, this then seemed kind of lame: if you can see the problem, why not fix it? So I went back and rewrote the parser as <a href="https://github.com/jawj/json-custom-numbers/blob/main/test/test_comparison/parseStateMachine.ts">a nice big state machine</a> instead. Since this was slightly slower than the recursive implementation had been, I then wrote a slightly less elegant but slightly faster <a href="https://github.com/jawj/json-custom-numbers/blob/main/src/parse.ts">final non-recursive implementation</a>.
   </p>
 
   <h3>You can't natively <code>stringify</code> everything you can <code>parse</code></h3>
