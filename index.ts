@@ -16,6 +16,7 @@ import stringEscapes from './json-docs/string-escapes.json';
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
 
 function main() {
+
   conformanceUI(document.querySelector('#conform-json-bigint')!, parse_jsonBigint, 'json-bigint');
   performanceUI(
     document.querySelector('#compare-json-bigint')!,
