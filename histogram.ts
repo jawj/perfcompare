@@ -4,7 +4,7 @@ function round(n: number) {
   return n < 10 ? n.toPrecision(2) : n < 100 ? n.toFixed(1) : n.toFixed(0);
 }
 
-export function histogram(data: number[][], binCount = 50, size = [400, 100], colors = ['#e30', '#03e'], margins = [30, 20, 20, 20], xtitle="ops/sec (higher is better)") {
+export function histogram(data: number[][], binCount = 50, size = [400, 100], colors = ['#e30', '#03e'], margins = [30, 25, 20, 25], xtitle="ops/ms (higher is better)") {
   let min = Infinity, max = -Infinity;
   for (let dataSet of data) {
     min = Math.min(min, ...dataSet);

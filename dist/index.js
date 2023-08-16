@@ -6830,8 +6830,8 @@ l",b.validJSONDifferentResults.map(n=>(0,$.default)("li","test: ",n.key,(0,$.def
 Object.entries(b).map(([n,r])=>[n,r.length])),h=b.matchedOutcomes.length===Object.
 keys(dI).length}},"Run tests")])})}y(It,"conformanceUI");var OI=NI(GI());function tt(I,W=!1){W||(I=[...I]);let{length:p}=I;return I.sort((b,o)=>b-o),p%2===
 1?I[(p-1)*.5]:.5*I[p*.5-1]+.5*I[p*.5]}y(tt,"median");function Bt(I){return I<10?I.toPrecision(2):I<100?I.toFixed(1):I.toFixed(0)}y(Bt,
-"round");function yb(I,W=50,p=[400,100],b=["#e30","#03e"],o=[30,20,20,20],h="ops\
-/sec (higher is better)"){let n=1/0,r=-1/0;for(let S of I)n=Math.min(n,...S),r=Math.
+"round");function yb(I,W=50,p=[400,100],b=["#e30","#03e"],o=[30,25,20,25],h="ops\
+/ms (higher is better)"){let n=1/0,r=-1/0;for(let S of I)n=Math.min(n,...S),r=Math.
 max(r,...S);let e=I.map(S=>tt(S)),m=e[0]<=e[1]?1:0,N=r-n,A=N/W,q=I.map(()=>new Array(
 W).fill(0));for(let S=0,C=I.length;S<C;S++){let P=I[S],F=q[S];for(let M of P)F[Math.
 min(Math.floor((M-n)/A),W-1)]++}let J=0;for(let S of q)J=Math.max(J,...S);let T=p[0]-

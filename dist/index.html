@@ -45,7 +45,7 @@
     That leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres <code>bigint</code> value to JavaScript's <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt"><code>BigInt()</code></a>.
   </p>
   <p>
-    Now: what if Postgres were to return that same <code>bigint</code> to JavaScript as a JSON value? Although <a href="https://datatracker.ietf.org/doc/html/rfc8259#section-6">the JSON spec</a> "allows implementations to set limits on the range and precision of numbers accepted", it doesn't set any limits of its own. Effectively, it allows arbitrarily large numbers — much larger than JavaScript can handle — and so Postgres goes right ahead and serializes them as normal.
+    Now: what if Postgres were to return that same <code>bigint</code> to JavaScript as a JSON value? Although <a href="https://datatracker.ietf.org/doc/html/rfc8259#section-6">the JSON spec</a> "allows implementations to set limits on the range and precision of numbers accepted", it doesn't set any limits of its own. Effectively, it allows arbitrarily large numbers — much larger than JavaScript can handle — and so Postgres goes right ahead and serializes them.
   </p>
   <p>
     So a JSON number value from Postgres gets parsed with JavaScript's <code>JSON.parse()</code> and, if it's bigger than JavaScript's <code>Number.MAX_SAFE_INTEGER</code> (or more negative than <code>Number.MIN_SAFE_INTEGER</code>), bad things happen.
