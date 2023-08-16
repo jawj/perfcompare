@@ -2,13 +2,13 @@
 <html>
 
 <head>
-  <title>Parse Postgres JSON in JavaScript and don't get the bigints wrong</title>
+  <title>Parsing Postgres JSON? Don't get the bigints wrong.</title>
   <link rel="stylesheet" href="index.css">
 </head>
 
 <body>
-  <h1>Parsing Postgres JSON in JavaScript</h1>
-  <h2>Plus a package to fix it, and what I learned along the way</h2>
+  <h1>Parsing Postgres JSON? Don't get the bigints wrong.</h1>
+  <h2>Introducing <a href="https://github.com/jawj/json-custom-numbers">json-custom-numbers</a>: a conformant, performant JavaScript JSON library</h2>
 
   <p>George MacKerron</p>
 
@@ -263,7 +263,7 @@ types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
   <h3>Writing aids thinking</h3>
 
   <p>
-    I didn't <a href="https://wiki.c2.com/?PlanToThrowOneAway"><i>plan</i> to throw one away</a>. But in the end it was writing about the code that led me to do just that.
+    I didn't <a href="https://course.ccs.neu.edu/cs5500f14/Notes/Prototyping1/planToThrowOneAway.html"><i>plan</i> to throw one away</a>. But in the end it was writing about the code that led me to do just that.
   </p>
   <p>
     I thought I'd finished the package, I'd already written most of this post, and I was in the middle of claiming that the json-custom-numbers parser perfectly matches native <code>JSON.parse()</code> behaviour. A caveat the occurred to me, and duly wrote a section about how my implementation was recursive, meaning that really-unusually-deeply-nested JSON structures would overflow the call stack.
