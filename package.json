@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "serve": "serve dist -p 8008 --no-clipboard",
-    "watch": "esbuild index.ts --bundle --keep-names --format=iife --target=es2022 --platform=neutral --minify --line-limit=80 --watch --outdir=dist",
+    "watch": "esbuild index.ts --bundle --keep-names --format=iife --target=es2016 --platform=neutral --minify --line-limit=80 --watch --outdir=dist",
     "start": "npm-run-all --parallel --race watch serve",
     "testQuery": "DOTENV_CONFIG_PATH=.dev.vars node -r dotenv/config query-test/query.mjs"
   },
