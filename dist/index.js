@@ -7681,8 +7681,9 @@ e-lossless-json"),[()=>Ot(VI),()=>pi(VI)],"lossless-json vs <code>JSON.parse</co
 de>, mixed JSON",["Native <code>JSON.parse</code>","lossless-json"]),st(document.
 querySelector("#conform-json-custom-numbers"),jt.parse,"json-custom-numbers"),yt(
 document.querySelector("#compare-json-custom-numbers"),[()=>Ot(VI),()=>(0,jt.parse)(
-VI)],"json-custom-numbers vs JSON.parse, mixed JSON",["Native JSON.parse","json-\
-custom-numbers"])}y(Z1,"main");window.addEventListener("load",Z1);})();
+VI)],"json-custom-numbers vs <code>JSON.parse</code>, mixed JSON",["Native <code\
+>JSON.parse</code>","json-custom-numbers"])}y(Z1,"main");window.addEventListener(
+"load",Z1);})();
 /*! Bundled license information:
 
 json-custom-numbers/dist/parse.js:

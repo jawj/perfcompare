@@ -46,8 +46,8 @@ function main() {
       () => parse_native(jsonMixed),
       () => parse_jsonCustomNumbers(jsonMixed),
     ],
-    'json-custom-numbers vs JSON.parse, mixed JSON',
-    ['Native JSON.parse', 'json-custom-numbers']
+    'json-custom-numbers vs <code>JSON.parse</code>, mixed JSON',
+    ['Native <code>JSON.parse</code>', 'json-custom-numbers']
   );
 }
 
