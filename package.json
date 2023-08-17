@@ -17,12 +17,12 @@
     "serve": "^14.2.0"
   },
   "dependencies": {
-    "@neondatabase/serverless": "^0.5.7",
+    "@neondatabase/serverless": "^0.6.0",
     "@types/json-bigint": "^1.0.1",
     "@types/mithril": "^2.0.12",
     "dotenv": "^16.3.1",
     "json-bigint": "^1.0.0",
-    "json-custom-numbers": "^2.0.16",
+    "json-custom-numbers": "^2.0.20",
     "lossless-json": "^2.0.9",
     "mithril": "^2.2.2"
   }
