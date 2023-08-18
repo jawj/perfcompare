@@ -195,7 +195,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
 import { parse } from 'json-custom-numbers';
 
 function parseJSONWithBigInts(str) {
-  return parse(str, undefined, function (str) {
+  return parse(str, undefined, function (k, str) {
     const n = +str;
     const safe = n >= Number.MIN_SAFE_INTEGER && n <= Number.MAX_SAFE_INTEGER;
     return safe || /[.eE]/.test(str) ? n : BigInt(str);
