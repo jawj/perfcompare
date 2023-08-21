@@ -14,22 +14,16 @@
 
   <br>
   <p>
-    JSON is a simple, human-readable data format that can be serialized/deserialized almost anywhere. Love it or hate it, there's a lot of it about.
+    Back in 2010, my first production Postgres database used a couple of JSON columns to provide some flexibility around the main schema. From the point of view of the database, those columns were actually just <code>text</code>. But Postgres got a native JSON type soon after (<a href="https://paquier.xyz/postgresql-2/postgres-9-2-highlight-json-data-type/">with version 9.2</a> in 2012), and <a href="https://www.postgresql.org/docs/current/datatype-json.html">its JSON support</a> has become steadily more powerful since then.
   </p>
   <p>
-    I used JSON in my first production Postgres database. This sat behind the back-end API for <a href="http://www.mappiness.org.uk">a research app</a>. The app could send back JSON containing any data it liked. From that JSON document, the API picked out a few fields it needed, storing and indexing them as ordinary columns. That done, it shoved the whole JSON object into its own column, preserving the data for me to retrieve and analyse later.
-  </p>
-  <p>
-    Back then, in 2010, the JSON data just went into the database as <code>text</code>. But it wasn't long before Postgres got a native JSON type (<a href="https://paquier.xyz/postgresql-2/postgres-9-2-highlight-json-data-type/">with version 9.2</a> in 2012). <a href="https://www.postgresql.org/docs/current/datatype-json.html">Its JSON support</a> has become steadily more powerful since then.
-  </p>
-  <p>
-    You can now use Postgres not just to store and retrieve JSON, but also to build, transform, index and query it. My own TypeScript/Postgres library uses Postgres's JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to create and return handy nested structures out of lateral joins</a>. This all represents a valuable <a href="https://news.ycombinator.com/item?id=28406334">hybrid of relational and 'NoSQL' database capabilities</a>.
+    As you probably know, you can now use Postgres not just to store and retrieve JSON, but also to build, transform, index and query it. My own TypeScript/Postgres library uses Postgres's JSON functions <a href="https://jawj.github.io/zapatos/#joins-as-nested-json">to create and return handy nested structures out of lateral joins</a>. This all represents a valuable <a href="https://news.ycombinator.com/item?id=28406334">hybrid of relational and NoSQL</a> database capabilities.
   </p>
 
   <h2>Trouble with numbers</h2>
 
   <p>
-    JSON has its origins in JavaScript, of course. But there's a potential problem when we use JSON to communicate between Postgres and JavaScript.
+    JSON, of course, has its origins in JavaScript. But there's a potential problem when we use JSON to communicate between Postgres and JavaScript.
   </p>
   <p>
     JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 <code>float64</code></a>. Postgres, of course, has many kinds. Some of these, like <code>bigint</code> or <code>numeric</code>, can represent larger and/or more precise numbers than a <code>float64</code>.
@@ -45,10 +39,13 @@
     That leaves you to choose how to deal with them in your code. In this case, you'd probably pass the stringified Postgres <code>bigint</code> value to JavaScript's <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/BigInt"><code>BigInt()</code></a>.
   </p>
   <p>
-    Now: what if Postgres were to return that same <code>bigint</code> to JavaScript as a JSON value? Although <a href="https://datatracker.ietf.org/doc/html/rfc8259#section-6">the JSON spec</a> "allows implementations to set limits on the range and precision of numbers accepted", it doesn't set any limits of its own. Effectively, it allows arbitrarily large numbers — much larger than JavaScript can handle — and so Postgres goes right ahead and serializes them.
+    Now: what if Postgres were to return that same <code>bigint</code> to JavaScript as a JSON value?
+  </p>  
+  <p>
+    The <a href="https://datatracker.ietf.org/doc/html/rfc8259#section-6">JSON spec</a> "allows implementations to set limits on the range and precision of numbers accepted", and notes "potential interoperability problems" when numbers larger or more precise than a <code>float64</code> are used. But it sets no limits of its own on what can be parsed or serialized. So we can't really blame Postgres for representing a <code>bigint</code> in JSON as an appropriately long sequence of digits. It's not obvious what else it could be expected to do.
   </p>
   <p>
-    So a JSON number value from Postgres gets parsed with JavaScript's <code>JSON.parse()</code> and, if it's bigger than JavaScript's <code>Number.MAX_SAFE_INTEGER</code> (or more negative than <code>Number.MIN_SAFE_INTEGER</code>), bad things happen.
+    This long JSON number value from Postgres then gets parsed with JavaScript's <code>JSON.parse()</code> and, if it's bigger than JavaScript's <code>Number.MAX_SAFE_INTEGER</code> (or more negative than <code>Number.MIN_SAFE_INTEGER</code>), bad things happen.
   </p>
 
   <pre>await { rows } = pool.query('SELECT to_json((1e16 + 1)::bigint) AS big');
@@ -80,17 +77,17 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the <code>reviver</code> argument to native <code>JSON.parse()</code></a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply as the <code>reviver</code> sees a number, it's already been parsed to a JavaScript <code>float64</code>, and the damage has been done).
   </p>
   <p>
-    As I see it, there are three key things we're going to want from a custom JSON parser:
+    As I see it, there are three key things we're going to want from such a custom JSON parser:
   </p>
   <ol>
     <li>
-      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for <code>JSON.parse()</code>. That means the same API and, critically, the same result for every input (aside from the numbers it handles better).
+      First, conformance: to avoid any surprises or complications, it should be a perfect drop-in replacement for <code>JSON.parse()</code>. That means the same API and, critically, the same result for every input (aside from the large numbers it handles better).
     </li>
     <li>
-      Second, performance: it's never going to match the optimised C++ of native <code>JSON.parse()</code>, but it should be the fastest gosh-darn JavaScript implementation we can come up with. In some common contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, electricity and money.
+      Second, performance: while it's never going to match the optimised C++ of native <code>JSON.parse()</code>, it should be the fastest gosh-darn JavaScript implementation we can come up with. In some common contexts (such as an API that mediates between Postgres and a website or app) it may have <b>a lot</b> of data flowing through it, and CPU cycles mean time, electricity and money.
     </li>
     <li>
-      And third, flexibility: when it comes across a large number (or indeed any number) in the JSON input, it should give us the chance to deal with it however we want. That could mean using <code>BigInt</code> or some other library.
+      And third, flexibility: when it comes across a large number (or indeed any number) in the JSON input, it should give us the chance to deal with it however we want. That could mean using a <code>BigInt</code>, a string, or <a href="https://blog.logrocket.com/how-to-represent-large-numbers-node-js-app/">some other number library</a>.
     </li>
   </ol>
   <p>
@@ -103,7 +100,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
   <h2>Conformance and performance testing</h2>
 
   <p>
-    Behaving the same way as <code>JSON.parse()</code> means our custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
+    Behaving the same way as <code>JSON.parse()</code> means a custom JSON parser should throw errors on the same documents, and return the same parsed results for the rest. So we need a set of well-chosen JSON documents, including all the edge cases we can think of, to test against. Happily, the <a href="https://github.com/nst/JSONTestSuite/tree/master/test_parsing">JSON Parsing Test Suite</a> has our back here, with hundreds of test files of valid, invalid, and ambiguous (by the spec) JSON.
   </p>
   <p>
     Assessing performance against <code>JSON.parse()</code> will also call for one or more JSON documents we can test against. Exactly what to use here is a judgment call, but certainly we want to benchmark the parsing of a wide range of JSON values.
@@ -269,7 +266,7 @@ types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
     I thought I'd finished the package, I'd already written most of this post, and I was in the middle of claiming that the json-custom-numbers parser perfectly matches native <code>JSON.parse()</code> behaviour. A caveat the occurred to me, and duly wrote a section about how my implementation was recursive, meaning that really-unusually-deeply-nested JSON structures would overflow the call stack.
   </p>
   <p>
-    Seeing it written down, and attempting to justify it, this then seemed kind of lame: if you can see the problem, why not fix it? So I went back and rewrote the parser as <a href="https://github.com/jawj/json-custom-numbers/blob/main/test/test_comparison/parseStateMachine.ts">a nice big state machine</a> instead. Since this was slightly slower than the recursive implementation had been, I then wrote a slightly less elegant but slightly faster <a href="https://github.com/jawj/json-custom-numbers/blob/main/src/parse.ts">final non-recursive implementation</a>.
+    Seeing it written down, and attempting to justify it, this then seemed kind of lame: if you can see the problem, why not fix it? So I went back and rewrote the parser as <a href="https://github.com/jawj/json-custom-numbers/blob/main/test/test_comparison/parseStateMachine.ts">a nice big state machine</a> instead. Since this was slightly slower than the recursive implementation had been, I then wrote a slightly faster <a href="https://github.com/jawj/json-custom-numbers/blob/main/src/parse.ts">final non-recursive implementation</a>.
   </p>
 
   <h3>You can't natively <code>stringify</code> everything you can <code>parse</code></h3>
