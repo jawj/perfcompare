@@ -26,7 +26,7 @@
     JSON, of course, has its origins in JavaScript. But there's a potential problem when we use JSON to communicate between Postgres and JavaScript.
   </p>
   <p>
-    JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 <code>float64</code></a>. Postgres, of course, has many kinds. Some of these, like <code>bigint</code> or <code>numeric</code>, can represent larger and/or more precise numbers than a <code>float64</code>.
+    JavaScript has one kind of number: an <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number">IEEE 754 <code>float64</code></a>. Postgres has many kinds. Some of these, like <code>bigint</code> or <code>numeric</code>, can represent larger and/or more precise numbers than a <code>float64</code>.
   </p>
   <p>
     JavaScript Postgres drivers typically parse these large or precise values into strings. For example:
@@ -77,7 +77,7 @@ types.setTypeParser(types.builtins.JSONB, myJSONParse);</pre>
     (You might have thought that you could use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/JSON/parse#the_reviver_parameter">the <code>reviver</code> argument to native <code>JSON.parse()</code></a> to avoid implementing a complete JSON parser. Sadly, you can't: by the time the function you supply as the <code>reviver</code> sees a number, it's already been parsed to a JavaScript <code>float64</code>, and the damage has been done).
   </p>
   <p>
-    As I see it, there are three key things we're going to want from such a custom JSON parser:
+    As I see it, there are three key things we're going to want from a custom JSON parser:
   </p>
   <ol>
     <li>
