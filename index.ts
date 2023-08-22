@@ -16,10 +16,13 @@ import stringEscapes from './json-docs/string-escapes.json';
 const jsonMixed = JSON.stringify({ boolNull, longNumbers, longStrings, shortNumbers, shortStrings, stringEscapes });
 
 function main() {
+  let el: HTMLElement | null;
 
-  conformanceUI(document.querySelector('#conform-json-bigint')!, parse_jsonBigint, 'json-bigint');
-  performanceUI(
-    document.querySelector('#compare-json-bigint')!,
+  el = document.querySelector('#conform-json-bigint');
+  if (el) conformanceUI(el, parse_jsonBigint, 'json-bigint');
+  el = document.querySelector('#compare-json-bigint');
+  if (el) performanceUI(
+    el,
     [
       () => parse_native(jsonMixed),
       () => parse_jsonBigint(jsonMixed),
@@ -28,9 +31,11 @@ function main() {
     ['Native <code>JSON.parse</code>', 'json-bigint']
   );
 
-  conformanceUI(document.querySelector('#conform-lossless-json')!, parse_losslessJson, 'lossless-json');
-  performanceUI(
-    document.querySelector('#compare-lossless-json')!,
+  el = document.querySelector('#conform-lossless-json');
+  if (el) conformanceUI(el, parse_losslessJson, 'lossless-json');
+  el = document.querySelector('#compare-lossless-json');
+  if (el) performanceUI(
+    el,
     [
       () => parse_native(jsonMixed),
       () => parse_losslessJson(jsonMixed),
@@ -39,9 +44,11 @@ function main() {
     ['Native <code>JSON.parse</code>', 'lossless-json']
   );
 
-  conformanceUI(document.querySelector('#conform-json-custom-numbers')!, parse_jsonCustomNumbers, 'json-custom-numbers');
-  performanceUI(
-    document.querySelector('#compare-json-custom-numbers')!,
+  el = document.querySelector('#conform-json-custom-numbers');
+  if (el) conformanceUI(el, parse_jsonCustomNumbers, 'json-custom-numbers');
+  el = document.querySelector('#compare-json-custom-numbers');
+  if (el) performanceUI(
+    el,
     [
       () => parse_native(jsonMixed),
       () => parse_jsonCustomNumbers(jsonMixed),
