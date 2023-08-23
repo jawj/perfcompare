@@ -286,6 +286,7 @@ types.setTypeParser(types.builtins.JSONB, parseJSONWithBigInts);</pre>
   <p>
     Anyway, for json-custom-numbers I decided to keep my non-recursive <code>stringify</code> implementation, but also to provide a <code>maxDepth</code> option for both <code>stringify</code> and <code>parse</code>. For <code>stringify</code>, <code>maxDepth</code> defaults to 50,000 — a bit higher than you get in Safari and Bun — but can be set to anything up to <code>Infinity</code>. For <code>parse</code>, it defaults to <code>Infinity</code>, which matches the native implementations and means you can go as deep as available memory allows.
   </p>
+  <p><i>The code behind this post is at <a href="https://github.com/jawj/perfcompare/">https://github.com/jawj/perfcompare/</a>.</i></p>
   <script src="index.js"></script>
 </body>
 
