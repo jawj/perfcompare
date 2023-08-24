@@ -7,7 +7,7 @@
 body {
   margin: 2em 4em;
   font: 15px/1.4;
-  background: #0C0D0D;
+  background: #131415;
   font-family: "IBM Plex Sans", sans-serif;
   color: #fff;
 }
@@ -27,6 +27,7 @@ code {
   position: relative;
   width: 400px;
   padding: 20px;
+  margin-top: 2px;
   margin-left: 2px;
   border-radius: 4px;
   background: linear-gradient(180deg, #303236 0%, #242628 100%);
