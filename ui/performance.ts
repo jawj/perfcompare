@@ -9,7 +9,7 @@ function speedCompare([a, b]: [number, number]) {
     (a / b).toFixed(2) + '\u00d7 slower';
 }
 
-export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[], colors = ['#e30', '#03e']) {
+export function performanceUI(el: HTMLElement, fns: (() => any)[], title: string, names: string[], colors = ['#FF6666', '#33BBFF']) {
   let reps: number | undefined;
   let trials: number | undefined;
   let trial: number | undefined;
